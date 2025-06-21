@@ -18,11 +18,16 @@ export class SubprocessCLITransport {
   }
 
   private async findCLI(): Promise<string> {
-    // First, try to find in PATH
+    // First, try to find in PATH - try both 'claude' and 'claude-code' for compatibility
     try {
-      return await which('claude-code');
+      return await which('claude');
     } catch {
-      // Not found in PATH, continue to check other locations
+      // Try the alternative name
+      try {
+        return await which('claude-code');
+      } catch {
+        // Not found in PATH, continue to check other locations
+      }
     }
 
     // Common installation paths to check
@@ -32,16 +37,24 @@ export class SubprocessCLITransport {
 
     if (isWindows) {
       paths.push(
+        join(home, 'AppData', 'Local', 'Programs', 'claude', 'claude.exe'),
         join(home, 'AppData', 'Local', 'Programs', 'claude-code', 'claude-code.exe'),
+        'C:\\Program Files\\claude\\claude.exe',
         'C:\\Program Files\\claude-code\\claude-code.exe'
       );
     } else {
       paths.push(
+        '/usr/local/bin/claude',
         '/usr/local/bin/claude-code',
+        '/usr/bin/claude',
         '/usr/bin/claude-code',
+        '/opt/homebrew/bin/claude',
         '/opt/homebrew/bin/claude-code',
+        join(home, '.local', 'bin', 'claude'),
         join(home, '.local', 'bin', 'claude-code'),
-        join(home, 'bin', 'claude-code')
+        join(home, 'bin', 'claude'),
+        join(home, 'bin', 'claude-code'),
+        join(home, '.claude', 'local', 'claude')  // Claude's custom installation path
       );
     }
 
@@ -49,7 +62,10 @@ export class SubprocessCLITransport {
     try {
       const { stdout: npmPrefix } = await execa('npm', ['config', 'get', 'prefix']);
       if (npmPrefix) {
-        paths.push(join(npmPrefix.trim(), 'bin', 'claude-code'));
+        paths.push(
+          join(npmPrefix.trim(), 'bin', 'claude'),
+          join(npmPrefix.trim(), 'bin', 'claude-code')
+        );
       }
     } catch {
       // Ignore error and continue
@@ -69,7 +85,7 @@ export class SubprocessCLITransport {
   }
 
   private buildCommand(): string[] {
-    const args: string[] = [this.prompt, '--output-format', 'json'];
+    const args: string[] = [this.prompt, '--print', '--output-format', 'json'];
 
     if (this.options.model) args.push('--model', this.options.model);
     if (this.options.apiKey) args.push('--api-key', this.options.apiKey);
