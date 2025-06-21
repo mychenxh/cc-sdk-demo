@@ -1,0 +1,49 @@
+import { InternalClient } from './_internal/client.js';
+import type { ClaudeCodeOptions, Message } from './types.js';
+
+/**
+ * Query Claude Code with a prompt and options.
+ * 
+ * @param prompt - The prompt to send to Claude Code
+ * @param options - Configuration options for the query
+ * @returns An async iterator that yields messages from Claude Code
+ * 
+ * @example
+ * ```typescript
+ * import { query } from '@anthropic-ai/claude-code-sdk';
+ * 
+ * for await (const message of query('Create a hello.txt file')) {
+ *   console.log(message);
+ * }
+ * ```
+ * 
+ * @example
+ * ```typescript
+ * import { query, ClaudeCodeOptions } from '@anthropic-ai/claude-code-sdk';
+ * 
+ * const options: ClaudeCodeOptions = {
+ *   allowedTools: ['Read', 'Write'],
+ *   permissionMode: 'acceptEdits',
+ *   cwd: '/Users/me/projects'
+ * };
+ * 
+ * for await (const message of query('Analyze this codebase', options)) {
+ *   if (message.type === 'assistant') {
+ *     // Handle assistant messages
+ *   } else if (message.type === 'result') {
+ *     // Handle final result
+ *   }
+ * }
+ * ```
+ */
+export async function* query(
+  prompt: string,
+  options?: ClaudeCodeOptions
+): AsyncGenerator<Message> {
+  const client = new InternalClient(prompt, options);
+  yield* client.processQuery();
+}
+
+// Re-export all types
+export * from './types.js';
+export * from './errors.js';

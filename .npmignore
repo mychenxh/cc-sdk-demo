@@ -1,0 +1,34 @@
+# Source files
+src/
+tests/
+
+# Configuration files
+.eslintrc.json
+.gitignore
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+CLAUDE.md
+
+# Development files
+*.test.ts
+*.spec.ts
+coverage/
+.vscode/
+.idea/
+
+# CI/CD
+.github/
+
+# Documentation screenshots
+screenshots/
+
+# Temporary files
+*.log
+*.tmp
+.DS_Store
+
+# Lock files (users should generate their own)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
