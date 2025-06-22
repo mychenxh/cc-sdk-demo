@@ -124,7 +124,7 @@ describe('InternalClient', () => {
       }
 
       expect(results).toHaveLength(1);
-      expect(results[0].type).toBe('result');
+      expect(results[0]?.type).toBe('result');
       expect((results[0] as any).usage?.input_tokens).toBe(100);
       expect((results[0] as any).cost?.total_cost).toBe(0.001);
     });
@@ -148,7 +148,7 @@ describe('InternalClient', () => {
 
       expect(warnSpy).toHaveBeenCalledWith('Unknown CLI output type:', unknownMessage);
       expect(results).toHaveLength(1);
-      expect(results[0].type).toBe('user');
+      expect(results[0]?.type).toBe('user');
 
       warnSpy.mockRestore();
     });

@@ -79,10 +79,10 @@ describe('Integration Tests', () => {
       }
 
       expect(results).toHaveLength(4);
-      expect(results[1].type).toBe('assistant');
+      expect(results[1]?.type).toBe('assistant');
       const assistantMsg = results[1] as any;
-      expect(assistantMsg.content[1].type).toBe('tool_use');
-      expect(assistantMsg.content[1].name).toBe('Write');
+      expect(assistantMsg?.content?.[1]?.type).toBe('tool_use');
+      expect(assistantMsg?.content?.[1]?.name).toBe('Write');
     });
 
     it('should pass options to InternalClient', async () => {
@@ -199,10 +199,10 @@ describe('Integration Tests', () => {
 
     it('should handle system messages', async () => {
       const messages: Message[] = [
-        { type: 'system', content: 'Starting analysis...' },
+        { type: 'system', subtype: 'info', data: { message: 'Starting analysis...' } },
         { type: 'user', content: 'Analyze the code' },
         { type: 'assistant', content: [{ type: 'text', text: 'Analyzing...' }] },
-        { type: 'system', content: 'Analysis complete' },
+        { type: 'system', subtype: 'info', data: { message: 'Analysis complete' } },
         { type: 'result', content: 'Code analysis finished' }
       ];
 

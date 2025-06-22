@@ -1,5 +1,5 @@
 import { SubprocessCLITransport } from './transport/subprocess-cli.js';
-import type { ClaudeCodeOptions, Message, CLIOutput } from '../types.js';
+import type { ClaudeCodeOptions, Message } from '../types.js';
 import { ClaudeSDKError } from '../errors.js';
 
 export class InternalClient {
@@ -28,7 +28,7 @@ export class InternalClient {
     }
   }
 
-  private parseMessage(output: CLIOutput): Message | null {
+  private parseMessage(output: any): Message | null {
     // Handle stream-json format directly from CLI
     switch (output.type) {
       case 'user':

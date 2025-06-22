@@ -2,14 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SubprocessCLITransport } from '../src/_internal/transport/subprocess-cli.js';
 import { CLIConnectionError, CLINotFoundError, CLIJSONDecodeError } from '../src/errors.js';
 import { execa } from 'execa';
-import * as whichModule from 'which';
+import which from 'which';
 import { Readable } from 'node:stream';
 import type { ExecaChildProcess } from 'execa';
 
 vi.mock('execa');
-vi.mock('which', () => ({
-  which: vi.fn()
-}));
+vi.mock('which');
 
 describe('SubprocessCLITransport', () => {
   let mockProcess: Partial<ExecaChildProcess>;
@@ -21,10 +19,14 @@ describe('SubprocessCLITransport', () => {
       read() {}
     });
     
+    const stdinStream = new Readable({ read() {} });
+    (stdinStream as any).write = vi.fn();
+    (stdinStream as any).end = vi.fn();
+    
     mockProcess = {
       stdout: stdoutStream,
       stderr: new Readable({ read() {} }),
-      stdin: new Readable({ read() {} }),
+      stdin: stdinStream,
       cancel: vi.fn(),
       then: vi.fn((onfulfilled) => {
         // Simulate successful process completion
@@ -44,8 +46,8 @@ describe('SubprocessCLITransport', () => {
     });
 
     it('should try common paths when not in PATH', async () => {
-      vi.mocked(whichModule.which).mockRejectedValue(new Error('not found'));
-      vi.mocked(execa).mockImplementation((cmd: string, args?: readonly string[]) => {
+      vi.mocked(which).mockRejectedValue(new Error('not found'));
+      vi.mocked(execa).mockImplementation((cmd: string, args?: any) => {
         if (cmd === '/usr/local/bin/claude-code' && args?.[0] === '--version') {
           return Promise.resolve({ exitCode: 0 } as any);
         }
@@ -53,7 +55,7 @@ describe('SubprocessCLITransport', () => {
           return mockProcess as any;
         }
         throw new Error('not found');
-      });
+      }) as any;
 
       const transport = new SubprocessCLITransport('test prompt');
       await transport.connect();
@@ -62,7 +64,7 @@ describe('SubprocessCLITransport', () => {
     });
 
     it('should throw CLINotFoundError when CLI not found anywhere', async () => {
-      vi.mocked(whichModule.which).mockRejectedValue(new Error('not found'));
+      vi.mocked(which).mockRejectedValue(new Error('not found'));
       vi.mocked(execa).mockRejectedValue(new Error('not found'));
 
       const transport = new SubprocessCLITransport('test prompt');
@@ -73,7 +75,7 @@ describe('SubprocessCLITransport', () => {
 
   describe('buildCommand', () => {
     it('should build basic command with prompt', async () => {
-      vi.mocked(whichModule.which).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
       vi.mocked(execa).mockReturnValue(mockProcess as any);
 
       const transport = new SubprocessCLITransport('test prompt');
@@ -87,7 +89,7 @@ describe('SubprocessCLITransport', () => {
     });
 
     it('should include all options in command', async () => {
-      vi.mocked(whichModule.which).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
       vi.mocked(execa).mockReturnValue(mockProcess as any);
 
       const options = {
@@ -142,7 +144,7 @@ describe('SubprocessCLITransport', () => {
 
   describe('connect', () => {
     it('should start CLI process with environment variables', async () => {
-      vi.mocked(whichModule.which).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
       vi.mocked(execa).mockReturnValue(mockProcess as any);
 
       const options = {
@@ -173,7 +175,7 @@ describe('SubprocessCLITransport', () => {
 
   describe('receiveMessages', () => {
     it('should parse and yield JSON messages', async () => {
-      vi.mocked(whichModule.which).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
       vi.mocked(execa).mockReturnValue(mockProcess as any);
 
       const transport = new SubprocessCLITransport('test prompt');
@@ -212,7 +214,7 @@ describe('SubprocessCLITransport', () => {
     });
 
     it('should throw CLIJSONDecodeError on invalid JSON', async () => {
-      vi.mocked(whichModule.which).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
       vi.mocked(execa).mockReturnValue(mockProcess as any);
 
       const transport = new SubprocessCLITransport('test prompt');
@@ -231,7 +233,7 @@ describe('SubprocessCLITransport', () => {
     });
 
     it('should skip empty lines', async () => {
-      vi.mocked(whichModule.which).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
       vi.mocked(execa).mockReturnValue(mockProcess as any);
 
       const transport = new SubprocessCLITransport('test prompt');
@@ -262,7 +264,7 @@ describe('SubprocessCLITransport', () => {
 
   describe('disconnect', () => {
     it('should cancel process if connected', async () => {
-      vi.mocked(whichModule.which).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
       vi.mocked(execa).mockReturnValue(mockProcess as any);
 
       const transport = new SubprocessCLITransport('test prompt');

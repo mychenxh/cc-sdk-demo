@@ -47,3 +47,16 @@ export async function* query(
 // Re-export all types
 export * from './types.js';
 export * from './errors.js';
+
+// Export new fluent API (backward compatible - original query function still available)
+export { claude, QueryBuilder } from './fluent.js';
+export { ResponseParser, type ToolExecution, type UsageStats } from './parser.js';
+export { 
+  Logger, 
+  LogLevel, 
+  ConsoleLogger, 
+  JSONLogger, 
+  MultiLogger, 
+  NullLogger,
+  type LogEntry 
+} from './logger.js';

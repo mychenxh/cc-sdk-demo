@@ -26,7 +26,72 @@ pnpm add @instantlyeasy/claude-code-sdk-ts
 
 ## Quick Start
 
-### Hello World Example
+### New Fluent API (Recommended)
+
+The SDK now includes a powerful fluent API that makes common tasks easier:
+
+```javascript
+import { claude } from '@instantlyeasy/claude-code-sdk-ts';
+
+// Simple Hello World
+const response = await claude()
+  .withModel('sonnet')
+  .skipPermissions()
+  .query('Say "Hello World!"')
+  .asText();
+
+console.log(response); // Outputs: Hello World!
+```
+
+### File Operations with Fluent API
+
+```javascript
+import { claude } from '@instantlyeasy/claude-code-sdk-ts';
+
+// Create a file with automatic result extraction
+const result = await claude()
+  .allowTools('Write')
+  .skipPermissions()
+  .query('Create a hello.txt file with "Hello from Claude!"')
+  .asResult();
+
+console.log('Task completed:', result);
+
+// Read and parse JSON data
+const config = await claude()
+  .allowTools('Read')
+  .query('Read package.json and return its content')
+  .asJSON();
+
+console.log('Version:', config.version);
+```
+
+### Advanced Features
+
+```javascript
+import { claude, ConsoleLogger, LogLevel } from '@instantlyeasy/claude-code-sdk-ts';
+
+// Full example with logging, event handlers, and response parsing
+const logger = new ConsoleLogger(LogLevel.DEBUG);
+
+const analysis = await claude()
+  .withModel('opus')
+  .allowTools('Read', 'Grep', 'Glob')
+  .inDirectory(process.cwd())
+  .withLogger(logger)
+  .onToolUse(tool => console.log(`Using ${tool.name}...`))
+  .query('Find all TODO comments in the codebase')
+  .asToolExecutions();
+
+// Get detailed tool execution results
+for (const execution of analysis) {
+  console.log(`${execution.tool}: ${execution.isError ? 'Failed' : 'Success'}`);
+}
+```
+
+### Classic API (Original Syntax)
+
+The original async generator API is still fully supported:
 
 ```javascript
 import { query } from '@instantlyeasy/claude-code-sdk-ts';
@@ -39,63 +104,6 @@ for await (const message of query('Say "Hello World!"')) {
         console.log(block.text); // Outputs: Hello World!
       }
     }
-  }
-}
-```
-
-### File Creation Example
-
-```javascript
-import { query, ClaudeCodeOptions } from '@instantlyeasy/claude-code-sdk-ts';
-
-const options = {
-  permissionMode: 'bypassPermissions', // Skip permission prompts
-  allowedTools: ['Write']               // Only allow file writing
-};
-
-for await (const message of query('Create a hello.txt file with "Hello from Claude!"', options)) {
-  if (message.type === 'result') {
-    console.log('Task completed:', message.content);
-  }
-}
-```
-
-### Advanced Example with Full Message Handling
-
-```javascript
-import { query, ClaudeCodeOptions } from '@instantlyeasy/claude-code-sdk-ts';
-
-const options = {
-  allowedTools: ['Read', 'Write', 'Edit'],
-  permissionMode: 'acceptEdits',
-  cwd: process.cwd()
-};
-
-for await (const message of query('Analyze package.json and add a test script', options)) {
-  switch (message.type) {
-    case 'system':
-      console.log(`System: ${message.subtype}`);
-      break;
-      
-    case 'assistant':
-      for (const block of message.content) {
-        if (block.type === 'text') {
-          console.log('Assistant:', block.text);
-        } else if (block.type === 'tool_use') {
-          console.log(`Using tool: ${block.name}`);
-        }
-      }
-      break;
-      
-    case 'user':
-      // Tool results from Claude's perspective
-      break;
-      
-    case 'result':
-      console.log('Result:', message.content);
-      console.log('Total cost:', message.cost?.total_cost);
-      console.log('Tokens used:', message.usage?.output_tokens);
-      break;
   }
 }
 ```
@@ -117,16 +125,46 @@ The Claude CLI may support API key authentication in some configurations. Check 
 
 ## API Reference
 
-### `query(prompt: string, options?: ClaudeCodeOptions): AsyncGenerator<Message>`
+### Fluent API
+
+#### `claude(): QueryBuilder`
+
+Creates a new query builder for the fluent API.
+
+```typescript
+const builder = claude()
+  .withModel('sonnet')        // Set model
+  .allowTools('Read', 'Write') // Configure tools
+  .skipPermissions()          // Skip permission prompts
+  .withTimeout(30000)         // Set timeout
+  .inDirectory('/path')       // Set working directory
+  .withLogger(logger)         // Add logging
+  .onMessage(handler)         // Add event handlers
+  .query('Your prompt');      // Execute query
+```
+
+#### Response Parsing Methods
+
+- `.asText()` - Extract plain text from assistant messages
+- `.asJSON<T>()` - Parse JSON from the response
+- `.asResult()` - Get the final result message
+- `.asToolExecutions()` - Get all tool executions with results
+- `.findToolResults(toolName)` - Find results from specific tool
+- `.getUsage()` - Get token usage and cost statistics
+- `.stream(callback)` - Stream messages with a callback
+
+### Classic API
+
+#### `query(prompt: string, options?: ClaudeCodeOptions): AsyncGenerator<Message>`
 
 Query Claude Code with a prompt and options.
 
-#### Parameters
+##### Parameters
 
 - `prompt` (string): The prompt to send to Claude Code
 - `options` (ClaudeCodeOptions, optional): Configuration options
 
-#### Returns
+##### Returns
 
 An async generator that yields `Message` objects.
 
@@ -220,10 +258,35 @@ interface ToolResultBlock {
 }
 ```
 
+## New Features in v0.2.0
+
+### 🎯 Fluent API
+A chainable API that reduces boilerplate and improves readability:
+- Method chaining for configuration
+- Automatic response parsing
+- Built-in event handlers
+- Type-safe throughout
+
+### 📊 Response Parsers
+Extract exactly what you need from Claude's responses:
+- Text extraction with `.asText()`
+- JSON parsing with `.asJSON<T>()`
+- Tool execution analysis
+- Usage statistics and costs
+
+### 📝 Logging Framework
+Pluggable logging system for better debugging:
+- Multiple log levels (ERROR, WARN, INFO, DEBUG, TRACE)
+- Console and JSON loggers included
+- Custom logger support
+- Multi-logger for sending to multiple destinations
+
 ## Examples
 
 Check out the [examples directory](./examples) for complete, runnable examples including:
-- Hello World
+- **[fluent-api-demo.js](./examples/fluent-api-demo.js)** - Comprehensive showcase of the new fluent API
+- **[response-parsing-demo.js](./examples/response-parsing-demo.js)** - Advanced response parsing techniques
+- Hello World (both classic and fluent syntax)
 - File operations
 - Code analysis
 - Interactive sessions
@@ -231,51 +294,36 @@ Check out the [examples directory](./examples) for complete, runnable examples i
 - Project scaffolding
 - Error handling
 
-### File Operations
+For detailed documentation on the fluent API, see [docs/FLUENT_API.md](./docs/FLUENT_API.md).
 
-```typescript
-import { query } from '@instantlyeasy/claude-code-sdk-ts';
+## Migrating to Fluent API
 
-const options = {
-  allowedTools: ['Read', 'Write', 'Edit'],
-  permissionMode: 'acceptEdits' as const
-};
+The fluent API dramatically reduces boilerplate code. Here are some common migration patterns:
 
-for await (const message of query('Read config.json and update version to 2.0', options)) {
-  // Process messages
+### Before (Classic API):
+```javascript
+let fullText = '';
+for await (const message of query('Generate a story')) {
+  if (message.type === 'assistant') {
+    for (const block of message.content) {
+      if (block.type === 'text') {
+        fullText += block.text;
+      }
+    }
+  }
 }
+console.log(fullText);
 ```
 
-### Code Analysis
-
-```typescript
-import { query } from '@instantlyeasy/claude-code-sdk-ts';
-
-const options = {
-  allowedTools: ['Read', 'Grep', 'Glob'],
-  context: ['src/**/*.ts'],
-  cwd: process.cwd()
-};
-
-for await (const message of query('Find all TODO comments in the codebase', options)) {
-  // Process messages
-}
+### After (Fluent API):
+```javascript
+const fullText = await claude()
+  .query('Generate a story')
+  .asText();
+console.log(fullText);
 ```
 
-### Web Search Integration
-
-```typescript
-import { query } from '@instantlyeasy/claude-code-sdk-ts';
-
-const options = {
-  allowedTools: ['WebSearch', 'WebFetch'],
-  maxTokens: 4000
-};
-
-for await (const message of query('Research the latest React best practices', options)) {
-  // Process messages
-}
-```
+More migration examples in [docs/FLUENT_API.md#migration-guide](./docs/FLUENT_API.md#migration-guide).
 
 ## Error Handling
 
@@ -321,7 +369,24 @@ npm run lint
 
 ## Changelog
 
-### v0.1.2 (Latest)
+### v0.2.0 (Latest) 🚀
+**New Features:**
+- ✨ **Fluent API**: New chainable API with `claude()` for improved developer experience
+- 📊 **Response Parsers**: Built-in methods for extracting text, JSON, and tool results
+- 📝 **Logging Framework**: Pluggable logging system with multiple implementations
+- 🔧 **Event Handlers**: `onMessage()`, `onAssistant()`, and `onToolUse()` callbacks
+- 📈 **Usage Statistics**: Get token counts and cost information with `.getUsage()`
+
+**Improvements:**
+- 100% backward compatible - existing code continues to work
+- Comprehensive TypeScript support throughout
+- Extensive test coverage for all new features
+- New examples demonstrating fluent API patterns
+
+### v0.1.4
+- Include examples in npm package
+
+### v0.1.2
 - Fixed CLI command search to properly find `claude` command
 - Removed unsupported authentication flags (CLI handles auth internally)
 - Improved error messages for authentication failures
