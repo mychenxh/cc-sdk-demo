@@ -55,11 +55,13 @@ export interface AssistantMessage {
 
 export interface SystemMessage {
   type: 'system';
-  content: string;
+  subtype?: string;
+  data?: any;
 }
 
 export interface ResultMessage {
   type: 'result';
+  subtype?: string;
   content: string;
   usage?: {
     input_tokens?: number;

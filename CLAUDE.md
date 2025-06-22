@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the official TypeScript SDK for Claude Code (`@anthropic-ai/claude-code-sdk`). It provides a type-safe wrapper around the Claude Code CLI, allowing developers to programmatically interact with Claude's capabilities.
+This is an unofficial TypeScript SDK for Claude Code (`@anthropic-ai/claude-code-sdk`). It provides a type-safe wrapper around the Claude Code CLI, allowing developers to programmatically interact with Claude's capabilities.
 
 ## Essential Commands
 
@@ -66,7 +66,7 @@ The project uses tsup for bundling:
 
 1. The SDK communicates with Claude Code CLI via subprocess using `execa`
 2. Messages are streamed line-by-line and parsed as JSON
-3. The CLI is located using the `which` package, falling back to `claude-code` in PATH
+3. The CLI is located using the `which` package, falling back to `claude` in PATH
 4. All options are passed as CLI arguments, following the Claude Code CLI interface
 5. Supports both streaming assistant messages and handling tool results
 

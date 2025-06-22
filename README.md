@@ -26,37 +26,76 @@ pnpm add @instantlyeasy/claude-code-sdk-ts
 
 ## Quick Start
 
-```typescript
+### Hello World Example
+
+```javascript
 import { query } from '@instantlyeasy/claude-code-sdk-ts';
 
-// Simple query
-for await (const message of query('Create a hello.txt file')) {
-  console.log(message);
-}
-
-// With options
-import { query, ClaudeCodeOptions } from '@instantlyeasy/claude-code-sdk-ts';
-
-const options: ClaudeCodeOptions = {
-  allowedTools: ['Read', 'Write'],
-  permissionMode: 'acceptEdits',
-  cwd: '/Users/me/projects'
-};
-
-for await (const message of query('Analyze this codebase', options)) {
+// Simple Hello World
+for await (const message of query('Say "Hello World!"')) {
   if (message.type === 'assistant') {
-    // Handle assistant messages with tool use
     for (const block of message.content) {
       if (block.type === 'text') {
-        console.log(block.text);
-      } else if (block.type === 'tool_use') {
-        console.log(`Using tool: ${block.name}`);
+        console.log(block.text); // Outputs: Hello World!
       }
     }
-  } else if (message.type === 'result') {
-    // Handle final result
-    console.log('Result:', message.content);
-    console.log('Cost:', message.cost?.total_cost);
+  }
+}
+```
+
+### File Creation Example
+
+```javascript
+import { query, ClaudeCodeOptions } from '@instantlyeasy/claude-code-sdk-ts';
+
+const options = {
+  permissionMode: 'bypassPermissions', // Skip permission prompts
+  allowedTools: ['Write']               // Only allow file writing
+};
+
+for await (const message of query('Create a hello.txt file with "Hello from Claude!"', options)) {
+  if (message.type === 'result') {
+    console.log('Task completed:', message.content);
+  }
+}
+```
+
+### Advanced Example with Full Message Handling
+
+```javascript
+import { query, ClaudeCodeOptions } from '@instantlyeasy/claude-code-sdk-ts';
+
+const options = {
+  allowedTools: ['Read', 'Write', 'Edit'],
+  permissionMode: 'acceptEdits',
+  cwd: process.cwd()
+};
+
+for await (const message of query('Analyze package.json and add a test script', options)) {
+  switch (message.type) {
+    case 'system':
+      console.log(`System: ${message.subtype}`);
+      break;
+      
+    case 'assistant':
+      for (const block of message.content) {
+        if (block.type === 'text') {
+          console.log('Assistant:', block.text);
+        } else if (block.type === 'tool_use') {
+          console.log(`Using tool: ${block.name}`);
+        }
+      }
+      break;
+      
+    case 'user':
+      // Tool results from Claude's perspective
+      break;
+      
+    case 'result':
+      console.log('Result:', message.content);
+      console.log('Total cost:', message.cost?.total_cost);
+      console.log('Tokens used:', message.usage?.output_tokens);
+      break;
   }
 }
 ```
@@ -97,25 +136,34 @@ An async generator that yields `Message` objects.
 
 ```typescript
 interface ClaudeCodeOptions {
+  // Model selection
   model?: string;              // Claude model to use (e.g., 'opus', 'sonnet')
-  tools?: ToolName[];          // Tools to enable
+  
+  // Tool configuration
   allowedTools?: ToolName[];   // Explicitly allowed tools
   deniedTools?: ToolName[];    // Explicitly denied tools
-  mcpServers?: MCPServer[];    // MCP servers to connect
+  
+  // Permission handling
   permissionMode?: PermissionMode; // 'default' | 'acceptEdits' | 'bypassPermissions'
-  context?: string[];          // Context file paths
+  
+  // Execution environment
   cwd?: string;               // Working directory
   env?: Record<string, string>; // Environment variables
-  timeout?: number;           // Timeout in milliseconds
-  debug?: boolean;            // Enable debug logging
   
-  // Note: Authentication is handled by Claude CLI
-  // Use `claude login` for Claude Pro/Max accounts
-  // API keys are not supported via CLI transport
-  apiKey?: string;             // Deprecated - not used by CLI
-  baseUrl?: string;            // Deprecated - not used by CLI
-  maxTokens?: number;          // Deprecated - not used by CLI
-  temperature?: number;        // Deprecated - not used by CLI
+  // MCP (Model Context Protocol) servers
+  mcpServers?: MCPServer[];    // MCP servers to connect
+  
+  // SDK options
+  timeout?: number;           // Timeout in milliseconds
+  debug?: boolean;            // Enable debug logging (Note: may interfere with JSON parsing)
+  
+  // Deprecated options (not used by CLI transport)
+  apiKey?: string;            // Use `claude login` instead
+  baseUrl?: string;           // Not applicable for CLI
+  maxTokens?: number;         // Not configurable via CLI
+  temperature?: number;       // Not configurable via CLI
+  tools?: ToolName[];         // Use allowedTools/deniedTools instead
+  context?: string[];         // Not implemented
 }
 ```
 
@@ -173,6 +221,15 @@ interface ToolResultBlock {
 ```
 
 ## Examples
+
+Check out the [examples directory](./examples) for complete, runnable examples including:
+- Hello World
+- File operations
+- Code analysis
+- Interactive sessions
+- Web research
+- Project scaffolding
+- Error handling
 
 ### File Operations
 

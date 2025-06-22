@@ -29,19 +29,43 @@ export class InternalClient {
   }
 
   private parseMessage(output: CLIOutput): Message | null {
+    // Handle stream-json format directly from CLI
     switch (output.type) {
-      case 'message':
-        return output.data;
+      case 'user':
+        return {
+          type: 'user',
+          content: output.message?.content || ''
+        };
+      
+      case 'assistant':
+        return {
+          type: 'assistant',
+          content: output.message?.content || []
+        };
+        
+      case 'system':
+        return {
+          type: 'system',
+          subtype: output.subtype,
+          data: output
+        };
+        
+      case 'result':
+        return {
+          type: 'result',
+          subtype: output.subtype,
+          content: output.result || '',
+          usage: output.usage,
+          cost: {
+            total_cost: output.total_cost_usd
+          }
+        };
       
       case 'error':
-        throw new ClaudeSDKError(`CLI error: ${output.error.message}`);
-      
-      case 'end':
-        return null;
+        throw new ClaudeSDKError(`CLI error: ${output.error?.message || 'Unknown error'}`);
       
       default:
-        // Handle unknown message types gracefully
-        console.warn('Unknown CLI output type:', output);
+        // Skip unknown message types
         return null;
     }
   }

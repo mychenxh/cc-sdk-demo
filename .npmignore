@@ -9,6 +9,7 @@ tsconfig.json
 tsup.config.ts
 vitest.config.ts
 CLAUDE.md
+.claude
 
 # Development files
 *.test.ts
@@ -32,3 +33,14 @@ screenshots/
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# Scripts
+publish.sh
+
+# Editor files
+*.swp
+*.swo
+
+# Git files
+.git/
+.gitignore

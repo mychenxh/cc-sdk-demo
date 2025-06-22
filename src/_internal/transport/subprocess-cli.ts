@@ -4,6 +4,7 @@ import { createInterface } from 'node:readline';
 import { platform } from 'node:os';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { access, constants } from 'node:fs/promises';
 import { CLIConnectionError, CLINotFoundError, ProcessError, CLIJSONDecodeError } from '../../errors.js';
 import type { ClaudeCodeOptions, CLIOutput } from '../../types.js';
 
@@ -18,7 +19,22 @@ export class SubprocessCLITransport {
   }
 
   private async findCLI(): Promise<string> {
-    // First, try to find in PATH - try both 'claude' and 'claude-code' for compatibility
+    // First check for local Claude installation (newer version with --output-format support)
+    const localPaths = [
+      join(homedir(), '.claude', 'local', 'claude'),
+      join(homedir(), '.claude', 'bin', 'claude')
+    ];
+    
+    for (const path of localPaths) {
+      try {
+        await access(path, constants.X_OK);
+        return path;
+      } catch {
+        // Continue checking
+      }
+    }
+    
+    // Then try to find in PATH - try both 'claude' and 'claude-code' for compatibility
     try {
       return await which('claude');
     } catch {
@@ -85,11 +101,12 @@ export class SubprocessCLITransport {
   }
 
   private buildCommand(): string[] {
-    const args: string[] = [this.prompt, '--print', '--output-format', 'json'];
+    // Build command following Python SDK pattern
+    const args: string[] = ['--output-format', 'stream-json', '--verbose'];
 
     // Claude CLI supported flags (from --help)
     if (this.options.model) args.push('--model', this.options.model);
-    if (this.options.debug) args.push('--debug');
+    // Don't pass --debug flag as it produces non-JSON output
     
     // Note: Claude CLI handles authentication internally
     // It will use either session auth or API key based on user's setup
@@ -102,20 +119,22 @@ export class SubprocessCLITransport {
       args.push('--disallowedTools', this.options.deniedTools.join(','));
     }
 
-    // Handle permission mode
+    // Handle permission mode - map to CLI's actual flag
     if (this.options.permissionMode === 'bypassPermissions') {
       args.push('--dangerously-skip-permissions');
     }
+    // Note: 'default' and 'acceptEdits' are not supported by current CLI version
 
     // Handle MCP config
     if (this.options.mcpServers && this.options.mcpServers.length > 0) {
-      const mcpConfig = this.options.mcpServers.map(server => ({
-        command: server.command,
-        args: server.args,
-        env: server.env
-      }));
+      const mcpConfig = {
+        mcpServers: this.options.mcpServers
+      };
       args.push('--mcp-config', JSON.stringify(mcpConfig));
     }
+
+    // Add --print flag (prompt will be sent via stdin)
+    args.push('--print');
 
     return args;
   }
@@ -130,6 +149,11 @@ export class SubprocessCLITransport {
       CLAUDE_CODE_ENTRYPOINT: 'sdk-ts'
     };
 
+    // Debug: Log the actual command being run
+    if (this.options.debug) {
+      console.error('DEBUG: Running command:', cliPath, args.join(' '));
+    }
+
     try {
       this.process = execa(cliPath, args, {
         env,
@@ -139,6 +163,12 @@ export class SubprocessCLITransport {
         stderr: 'pipe',
         buffer: false
       });
+      
+      // Send prompt via stdin
+      if (this.process.stdin) {
+        this.process.stdin.write(this.prompt);
+        this.process.stdin.end();
+      }
     } catch (error) {
       throw new CLIConnectionError(`Failed to start Claude Code CLI: ${error}`);
     }
@@ -149,32 +179,47 @@ export class SubprocessCLITransport {
       throw new CLIConnectionError('Not connected to CLI');
     }
 
+    // Handle stderr in background
+    if (this.process.stderr) {
+      const stderrRl = createInterface({
+        input: this.process.stderr,
+        crlfDelay: Infinity
+      });
+      
+      stderrRl.on('line', (line) => {
+        if (this.options.debug) {
+          console.error('DEBUG stderr:', line);
+        }
+      });
+    }
+
     const rl = createInterface({
       input: this.process.stdout,
       crlfDelay: Infinity
     });
 
-    try {
-      for await (const line of rl) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        try {
-          const parsed = JSON.parse(trimmed) as CLIOutput;
-          yield parsed;
-          
-          if (parsed.type === 'end') {
-            break;
-          }
-        } catch (error) {
+    // Process stream-json format - each line is a JSON object
+    for await (const line of rl) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine) continue;
+      
+      if (this.options.debug) {
+        console.error('DEBUG stdout:', trimmedLine);
+      }
+      
+      try {
+        const parsed = JSON.parse(trimmedLine) as CLIOutput;
+        yield parsed;
+      } catch (error) {
+        // Skip non-JSON lines (like Python SDK does)
+        if (trimmedLine.startsWith('{') || trimmedLine.startsWith('[')) {
           throw new CLIJSONDecodeError(
             `Failed to parse CLI output: ${error}`,
-            trimmed
+            trimmedLine
           );
         }
+        continue;
       }
-    } finally {
-      rl.close();
     }
 
     // Wait for process to exit
