@@ -87,45 +87,34 @@ export class SubprocessCLITransport {
   private buildCommand(): string[] {
     const args: string[] = [this.prompt, '--print', '--output-format', 'json'];
 
+    // Claude CLI supported flags (from --help)
     if (this.options.model) args.push('--model', this.options.model);
-    if (this.options.apiKey) args.push('--api-key', this.options.apiKey);
-    if (this.options.baseUrl) args.push('--base-url', this.options.baseUrl);
-    if (this.options.maxTokens) args.push('--max-tokens', this.options.maxTokens.toString());
-    if (this.options.temperature) args.push('--temperature', this.options.temperature.toString());
-    if (this.options.timeout) args.push('--timeout', this.options.timeout.toString());
     if (this.options.debug) args.push('--debug');
+    
+    // Note: Claude CLI handles authentication internally
+    // It will use either session auth or API key based on user's setup
 
-    // Handle tools
-    if (this.options.tools && this.options.tools.length > 0) {
-      args.push('--tools', this.options.tools.join(','));
-    }
+    // Handle allowed/disallowed tools (Claude CLI uses camelCase flags)
     if (this.options.allowedTools && this.options.allowedTools.length > 0) {
-      args.push('--allowed-tools', this.options.allowedTools.join(','));
+      args.push('--allowedTools', this.options.allowedTools.join(','));
     }
     if (this.options.deniedTools && this.options.deniedTools.length > 0) {
-      args.push('--denied-tools', this.options.deniedTools.join(','));
+      args.push('--disallowedTools', this.options.deniedTools.join(','));
     }
 
     // Handle permission mode
-    if (this.options.permissionMode) {
-      args.push('--permission-mode', this.options.permissionMode);
+    if (this.options.permissionMode === 'bypassPermissions') {
+      args.push('--dangerously-skip-permissions');
     }
 
-    // Handle context files
-    if (this.options.context && this.options.context.length > 0) {
-      for (const ctx of this.options.context) {
-        args.push('--context', ctx);
-      }
-    }
-
-    // Handle MCP servers
+    // Handle MCP config
     if (this.options.mcpServers && this.options.mcpServers.length > 0) {
-      for (const server of this.options.mcpServers) {
-        const serverStr = server.args 
-          ? `${server.command} ${server.args.join(' ')}`
-          : server.command;
-        args.push('--mcp-server', serverStr);
-      }
+      const mcpConfig = this.options.mcpServers.map(server => ({
+        command: server.command,
+        args: server.args,
+        env: server.env
+      }));
+      args.push('--mcp-config', JSON.stringify(mcpConfig));
     }
 
     return args;
@@ -191,7 +180,7 @@ export class SubprocessCLITransport {
     // Wait for process to exit
     try {
       await this.process;
-    } catch (error) {
+    } catch (error: any) {
       if (error.exitCode !== 0) {
         throw new ProcessError(
           `Claude Code CLI exited with code ${error.exitCode}`,
