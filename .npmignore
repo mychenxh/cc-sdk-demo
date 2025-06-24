@@ -11,6 +11,7 @@ vitest.config.ts
 CLAUDE.md
 .claude
 
+
 # Development files
 *.test.ts
 *.spec.ts
@@ -28,6 +29,7 @@ screenshots/
 *.log
 *.tmp
 .DS_Store
+.temp
 
 # Lock files (users should generate their own)
 package-lock.json

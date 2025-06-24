@@ -33,7 +33,7 @@ The `QueryBuilder` class provides chainable methods for configuring your query:
 
 ```typescript
 claude()
-  .withModel('opus')        // or 'sonnet', 'haiku'
+  .withModel('opus')        // or 'sonnet'
   .withTimeout(60000)       // 60 seconds
   .debug(true)              // Enable debug mode
 ```

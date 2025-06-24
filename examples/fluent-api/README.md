@@ -1,239 +1,341 @@
 # Fluent API Examples
 
-This directory contains examples demonstrating the Claude Code SDK's fluent API syntax. The fluent API provides a chainable, intuitive interface for building queries with type safety and better developer experience.
+This directory contains comprehensive examples demonstrating the Claude Code SDK's fluent API. The fluent API provides a chainable, intuitive interface for building queries with type safety and excellent developer experience.
+
+## Getting Started
+
+### Prerequisites
+
+1. Install the SDK:
+```bash
+npm install @instantlyeasy/claude-code-sdk-ts
+```
+
+2. Ensure Claude Code CLI is installed and configured:
+```bash
+claude --help
+```
 
 ## Examples Overview
 
-### 1. Hello World (`hello-world.js`)
-The simplest example showing basic usage:
+### Basic Examples
+
+#### 1. Hello World (`hello-world.js`)
+The simplest example to get started:
 ```javascript
+import { claude } from '@instantlyeasy/claude-code-sdk-ts';
+
 const result = await claude()
-  .withModel('sonnet')
   .query('Say hello!')
   .asText();
 ```
+**Run:** `node hello-world.js`
 
-### 2. Code Analysis (`code-analysis.js`)
-Analyze code files and project structure:
+#### 2. Error Handling (`error-handling.js`)
+Comprehensive error handling patterns including retry logic, graceful degradation, and debugging:
 ```javascript
-await claude()
-  .withModel('opus')
-  .allowTools('Read', 'Grep', 'Glob')
-  .inDirectory(projectPath)
-  .query('Analyze the project architecture')
-  .asText();
-```
-
-### 3. Error Handling (`error-handling.js`)
-Comprehensive error handling patterns:
-```javascript
-try {
-  await claude()
-    .withTimeout(5000)
-    .query('Complex task')
-    .asText();
-} catch (error) {
-  // Handle specific error types
+// Graceful degradation with fallback models
+async function queryWithFallback(prompt) {
+  const models = ['opus', 'sonnet'];
+  for (const model of models) {
+    try {
+      return await claude().withModel(model).query(prompt).asText();
+    } catch (error) {
+      console.warn(`${model} failed, trying next...`);
+    }
+  }
 }
 ```
+**Run:** `node error-handling.js`
 
-### 4. File Operations (`file-operations.js`)
-File manipulation with safety controls:
+### File and Code Operations
+
+#### 3. File Operations (`file-operations.js`)
+Safe file manipulation with permission controls:
 ```javascript
 await claude()
   .allowTools('Read', 'Write', 'Edit')
   .acceptEdits()
-  .withMCPServerPermission('file-system-mcp', 'whitelist')
-  .query('Organize project files')
+  .inDirectory('./src')
+  .query('Organize imports in all TypeScript files')
   .asText();
 ```
+**Run:** `node file-operations.js [directory]`
 
-### 5. Interactive Session (`interactive-session.js`)
-Build interactive CLI applications:
+#### 4. Code Analysis (`code-analysis.js`)
+Analyze codebases and generate insights:
+```javascript
+const analysis = await claude()
+  .withModel('opus')
+  .allowTools('Read', 'Grep', 'Glob', 'LS')
+  .query('Analyze the architecture and suggest improvements')
+  .asJSON();
+```
+**Run:** `node code-analysis.js [project-path]`
+
+### Interactive Applications
+
+#### 5. Interactive Session (`interactive-session.js`)
+Build conversational CLI applications:
 ```javascript
 const session = claude()
   .withModel('sonnet')
-  .allowTools('Read', 'Write')
-  .onToolUse(tool => console.log(`Tool: ${tool.name}`));
-```
+  .onToolUse(tool => console.log(`🔧 Using: ${tool.name}`))
+  .onMessage(msg => trackHistory(msg));
 
-### 6. Project Scaffolding (`project-scaffolding.js`)
-Create complete project structures:
+// Maintain conversation context
+while (true) {
+  const input = await getUserInput();
+  const response = await session.query(input).asText();
+  console.log(response);
+}
+```
+**Run:** `node interactive-session.js [role]`
+
+#### 6. Project Scaffolding (`project-scaffolding.js`)
+Generate complete project structures:
 ```javascript
 await claude()
   .withModel('opus')
   .allowTools('Write', 'LS', 'Bash')
   .acceptEdits()
-  .query('Create a React TypeScript project')
-  .asText();
+  .query(`Create a ${framework} project with TypeScript, testing, and CI/CD`)
+  .stream(handleProgress);
 ```
+**Run:** `node project-scaffolding.js <framework> <project-name>`
 
-### 7. Web Research (`web-research.js`)
-Research and learning tasks:
+#### 7. Web Research (`web-research.js`)
+Research and learning assistant:
 ```javascript
-await claude()
+const research = await claude()
   .withModel('opus')
-  .query('Compare JavaScript frameworks')
+  .query('Compare React, Vue, and Angular for enterprise applications')
   .asText();
 ```
+**Run:** `node web-research.js [topic]`
+
+### Advanced Features (`new-features/`)
+
+The `new-features` directory contains examples of advanced SDK capabilities:
+
+- **Token Streaming** - Real-time token-by-token streaming
+- **Advanced Error Handling** - Typed errors and recovery strategies
+- **Retry Strategies** - Exponential backoff, circuit breakers, and more
+
+See [new-features/README.md](new-features/README.md) for details.
 
 ## Key Fluent API Features
 
-### Method Chaining
-All configuration methods return the builder instance for chaining:
+### 1. Method Chaining
+Build complex queries with readable chains:
 ```javascript
 claude()
   .withModel('opus')
   .allowTools('Read', 'Write')
   .withTimeout(30000)
   .debug(true)
-  .query('...')
+  .onMessage(console.log)
+  .query('Build a REST API')
 ```
 
-### Response Formats
-Choose how to consume the response:
+### 2. Response Formats
+Choose the format that fits your needs:
 ```javascript
-// As plain text
+// Plain text
 const text = await query.asText();
 
-// Stream with callback
-await query.stream(async (message) => {
-  if (message.type === 'assistant') {
-    for (const block of message.content) {
-      if (block.type === 'text') {
-        process.stdout.write(block.text);
-      }
-    }
-  }
-});
+// Structured JSON
+const data = await query.asJSON();
 
-// As complete result
+// Complete result with metadata
 const result = await query.asResult();
 
-// As raw messages (using queryRaw)
-for await (const message of claude().queryRaw('prompt')) {
-  console.log(message.type);
+// Tool execution results
+const files = await query.findToolResults('Read');
+
+// Streaming with callback
+await query.stream(async (message) => {
+  // Handle each message as it arrives
+});
+
+// Raw message iteration
+for await (const msg of query.asMessages()) {
+  // Process messages one by one
 }
 ```
 
-### Event Handlers
-React to events during execution:
+### 3. Permission Management
+Control tool usage with precision:
 ```javascript
 claude()
-  .onMessage(msg => console.log('Message:', msg.type))
-  .onToolUse(tool => console.log('Tool:', tool.name))
-  .onAssistant(content => console.log('Assistant:', content))
-```
-
-### Permission Management
-Fine-grained control over tool usage:
-```javascript
-claude()
-  .allowTools('Read', 'Grep')
+  // Allow specific tools
+  .allowTools('Read', 'Grep', 'LS')
+  // Deny dangerous tools
   .denyTools('Bash', 'Write')
-  .withPermissions('acceptEdits')
-  .skipPermissions() // For trusted operations
+  // Skip permission prompts
+  .skipPermissions()
+  // Or accept all edits
+  .acceptEdits()
 ```
 
-### MCP Server Permissions
-Control permissions at the server level:
+### 4. MCP Server Permissions
+Manage permissions at the server level:
 ```javascript
 claude()
   .withMCPServerPermission('file-system-mcp', 'whitelist')
   .withMCPServerPermissions({
-    'database-mcp': 'whitelist',
-    'external-api-mcp': 'blacklist'
+    'git-mcp': 'whitelist',
+    'database-mcp': 'ask',
+    'network-mcp': 'blacklist'
   })
 ```
 
-### Configuration Files
-Load settings from external files:
+### 5. Configuration and Roles
+Use configuration files and predefined roles:
 ```javascript
 await claude()
-  .withConfigFile('../config/json/mcpconfig.json')
-  .withRolesFile('../config/json/roles.json')
-  .withRole('dataAnalyst')
-```
-
-### Roles and Personas
-Apply predefined roles:
-```javascript
-await claude()
-  .withRole('developer', { 
+  .withConfigFile('./config.json')
+  .withRolesFile('./roles.json')
+  .withRole('senior-developer', {
     language: 'TypeScript',
-    framework: 'React' 
+    framework: 'Next.js'
   })
-  .query('Create a component')
+  .query('Review this pull request')
 ```
 
-## Running the Examples
+### 6. Event Handlers
+React to events during execution:
+```javascript
+claude()
+  .onMessage(msg => logger.log(msg))
+  .onToolUse(tool => console.log(`Tool: ${tool.name}`))
+  .onAssistant(content => updateUI(content))
+  .onError(error => handleError(error))
+```
 
-```bash
-# Basic example
-node fluent-api/hello-world.js
+### 7. Custom Logging
+Integrate with your logging system:
+```javascript
+import { ConsoleLogger, LogLevel } from '@instantlyeasy/claude-code-sdk-ts';
 
-# With parameters
-node fluent-api/project-scaffolding.js react-app my-project
-
-# Interactive session
-node fluent-api/interactive-session.js
-
-# With a specific role
-node fluent-api/interactive-session.js developer
+claude()
+  .withLogger(new ConsoleLogger(LogLevel.DEBUG))
+  // Or use a custom logger
+  .withLogger({
+    info: (msg, ctx) => myLogger.info(msg, ctx),
+    error: (msg, ctx) => myLogger.error(msg, ctx),
+    warn: (msg, ctx) => myLogger.warn(msg, ctx),
+    debug: (msg, ctx) => myLogger.debug(msg, ctx)
+  })
 ```
 
 ## Best Practices
 
-1. **Start Simple**: Begin with basic queries and add configuration as needed
-2. **Use Type Safety**: The fluent API is fully typed - leverage your IDE's autocomplete
-3. **Handle Errors**: Always wrap queries in try-catch for production code
-4. **Stream When Appropriate**: Use `stream()` callback for long responses
-5. **Control Permissions**: Be explicit about tool permissions for safety
-6. **Leverage Roles**: Use roles for consistent behavior across queries
+1. **Error Handling**: Always wrap queries in try-catch blocks
+   ```javascript
+   try {
+     const result = await claude().query('...').asText();
+   } catch (error) {
+     // Handle specific error types
+   }
+   ```
+
+2. **Use Appropriate Models**: Choose models based on task complexity
+   - `sonnet` - Balanced performance, faster responses
+   - `opus` - Complex reasoning and analysis, more thorough
+
+3. **Stream Long Responses**: Better UX for lengthy outputs
+   ```javascript
+   await query.stream(async (msg) => {
+     // Update UI progressively
+   });
+   ```
+
+4. **Be Explicit with Permissions**: Security first
+   ```javascript
+   .allowTools('Read')  // Only what you need
+   .denyTools('Bash')   // Explicitly deny dangerous tools
+   ```
+
+5. **Use Roles for Consistency**: Maintain behavior across queries
+   ```javascript
+   .withRole('code-reviewer')
+   ```
 
 ## Advanced Patterns
 
-### Custom Logger
+### Retry with Exponential Backoff
 ```javascript
-claude()
-  .withLogger({
-    info: (msg, ctx) => console.log('[INFO]', msg),
-    error: (msg, ctx) => console.error('[ERROR]', msg),
-    warn: (msg, ctx) => console.warn('[WARN]', msg),
-    debug: (msg, ctx) => console.debug('[DEBUG]', msg)
+async function resilientQuery(prompt, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await claude().query(prompt).asText();
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+    }
+  }
+}
+```
+
+### Session Management
+```javascript
+class ClaudeSession {
+  constructor(role, model = 'sonnet') {
+    this.builder = claude().withModel(model).withRole(role);
+    this.history = [];
+  }
+  
+  async query(prompt) {
+    const result = await this.builder.query(prompt).asText();
+    this.history.push({ prompt, result });
+    return result;
+  }
+}
+```
+
+### Tool Usage Monitoring
+```javascript
+const toolUsage = new Map();
+
+await claude()
+  .onToolUse(tool => {
+    toolUsage.set(tool.name, (toolUsage.get(tool.name) || 0) + 1);
   })
-```
-
-### Environment Variables
-```javascript
-claude()
-  .withEnv({
-    PROJECT_ROOT: '/path/to/project',
-    NODE_ENV: 'development'
-  })
-```
-
-### Multiple MCP Servers
-```javascript
-claude()
-  .withMCP(
-    'file-system-mcp',
-    'git-mcp',
-    'database-mcp'
-  )
-```
-
-### Combining Features
-```javascript
-const result = await claude()
-  .withConfigFile('../config/json/config.json')
-  .withRole('senior-developer')
-  .withMCPServerPermission('git-mcp', 'whitelist')
-  .allowTools('Read', 'Write', 'Edit', 'Bash')
-  .acceptEdits()
-  .withTimeout(120000)
-  .debug(true)
-  .onToolUse(tool => console.log(`Tool: ${tool.name}`))
-  .query('Implement the new feature')
+  .query('Analyze this codebase')
   .asText();
+
+console.log('Tool usage statistics:', toolUsage);
 ```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **CLI Not Found**: Ensure Claude Code CLI is installed:
+   ```bash
+   claude --version
+   ```
+
+2. **Permission Denied**: Check tool permissions:
+   ```javascript
+   .allowTools('Read', 'Write')
+   .skipPermissions() // For testing only
+   ```
+
+3. **Timeout Errors**: Increase timeout for complex tasks:
+   ```javascript
+   .withTimeout(60000) // 60 seconds
+   ```
+
+4. **Model Errors**: Verify model names:
+   ```javascript
+   .withModel('sonnet') // or 'opus'
+   ```
+
+## Additional Resources
+
+- [SDK Documentation](../../README.md)
+- [API Reference](../../docs/API.md)
+- [Advanced Features](new-features/README.md)
+- [Configuration Guide](../config/README.md)

@@ -13,7 +13,7 @@ export interface RoleDefinition {
   name: string;
   /** Optional description of the role's purpose */
   description?: string;
-  /** Model to use for this role (e.g., 'opus', 'sonnet', 'haiku') */
+  /** Model to use for this role (e.g., 'opus', 'sonnet') */
   model: string;
   /** Permission configuration for the role */
   permissions: {

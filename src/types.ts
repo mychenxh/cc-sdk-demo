@@ -93,8 +93,7 @@ import type { MCPServerPermissionConfig } from './types/permissions.js';
 // Main options interface
 export interface ClaudeCodeOptions {
   model?: string;
-  apiKey?: string;
-  baseUrl?: string;
+  // Authentication is handled entirely by Claude Code CLI
   tools?: ToolName[];
   allowedTools?: ToolName[];
   deniedTools?: ToolName[];

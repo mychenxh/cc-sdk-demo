@@ -124,5 +124,5 @@ node examples/enhanced-features-preview.js
 ## Feedback Welcome
 
 These features are based on community feedback. If you have suggestions or use cases, please share them:
-- GitHub Issues: [Report issues or suggestions](https://github.com/anthropics/claude-code-sdk-ts/issues)
-- Discussions: [Join the conversation](https://github.com/anthropics/claude-code-sdk-ts/discussions)
+- GitHub Issues: [Report issues or suggestions](https://github.com/instantlyeasy/claude-code-sdk-ts/issues)
+- Discussions: [Join the conversation](https://github.com/instantlyeasy/claude-code-sdk-ts/discussions)

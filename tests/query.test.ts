@@ -20,7 +20,7 @@ describe('query function exports', () => {
   it('should accept optional parameters', () => {
     const result1 = query('test prompt');
     const result2 = query('test prompt', {});
-    const result3 = query('test prompt', { model: 'claude-3' });
+    const result3 = query('test prompt', { model: 'opus' });
     
     expect(result1).toBeDefined();
     expect(result2).toBeDefined();

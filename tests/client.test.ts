@@ -25,7 +25,7 @@ describe('InternalClient', () => {
     });
 
     it('should create client with custom options', () => {
-      const options = { model: 'claude-3', maxTokens: 1000 };
+      const options = { model: 'opus', maxTokens: 1000 };
       const client = new InternalClient('test prompt', options);
       expect(client).toBeDefined();
     });

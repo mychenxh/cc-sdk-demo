@@ -37,11 +37,12 @@ export class ErrorDetector {
       return new RateLimitError('Rate limit exceeded', retryAfter);
     }
     
-    // Authentication errors
-    if (output.includes('invalid_api_key') ||
-        output.includes('authentication_failed') ||
-        output.includes('401')) {
-      return new AuthenticationError('Authentication failed');
+    // Authentication errors (handled by Claude CLI)
+    if (output.includes('authentication') ||
+        output.includes('unauthorized') ||
+        output.includes('401') ||
+        output.includes('please login')) {
+      return new AuthenticationError('Authentication failed - run: claude login');
     }
     
     // Model availability

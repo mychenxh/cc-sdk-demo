@@ -43,11 +43,11 @@ describe('Enhanced Error Types', () => {
     });
 
     it('should create AuthenticationError with auth method', () => {
-      const error = new AuthenticationError('Invalid credentials', 'api_key', 'Please check your API key');
+      const error = new AuthenticationError('Invalid credentials', 'cli', 'Please run: claude login');
       
       expect(error).toBeInstanceOf(AuthenticationError);
-      expect(error.authMethod).toBe('api_key');
-      expect(error.requiredAction).toBe('Please check your API key');
+      expect(error.authMethod).toBe('cli');
+      expect(error.requiredAction).toBe('Please run: claude login');
       expect(error.statusCode).toBe(401);
       expect(error.name).toBe('AuthenticationError');
     });
@@ -246,9 +246,9 @@ describe('Enhanced Error Types', () => {
 
     it('should detect authentication error', () => {
       const outputs = [
-        'Error: invalid_api_key',
+        'Error: authentication_failed',
         'Authentication failed: 401 Unauthorized',
-        'Invalid API key provided'
+        'Please login using claude login'
       ];
 
       outputs.forEach(output => {

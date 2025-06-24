@@ -163,11 +163,11 @@ describe('QueryBuilder', () => {
       });
 
       claude()
-        .withEnv({ NODE_ENV: 'test', API_KEY: 'secret' })
+        .withEnv({ NODE_ENV: 'test', AUTH_TOKEN: 'secret' })
         .query('test');
 
       expect(mockQuery).toHaveBeenCalledWith('test', expect.objectContaining({
-        env: { NODE_ENV: 'test', API_KEY: 'secret' }
+        env: { NODE_ENV: 'test', AUTH_TOKEN: 'secret' }
       }));
     });
 
@@ -178,11 +178,11 @@ describe('QueryBuilder', () => {
 
       claude()
         .withEnv({ NODE_ENV: 'test' })
-        .withEnv({ API_KEY: 'secret' })
+        .withEnv({ AUTH_TOKEN: 'secret' })
         .query('test');
 
       expect(mockQuery).toHaveBeenCalledWith('test', expect.objectContaining({
-        env: { NODE_ENV: 'test', API_KEY: 'secret' }
+        env: { NODE_ENV: 'test', AUTH_TOKEN: 'secret' }
       }));
     });
   });

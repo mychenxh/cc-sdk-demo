@@ -5,10 +5,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js Version](https://img.shields.io/node/v/@instantlyeasy/claude-code-sdk-ts.svg)](https://nodejs.org/)
+[![LLM.yml](https://img.shields.io/badge/LLM.yml-v1.0.0-blue)](./LLM.yml)
 
 Unofficial TypeScript port of the official Python Claude Code SDK for [Claude Code](https://github.com/anthropics/claude-code), the CLI tool for interacting with Claude.
 
 > **Note**: This is a community-maintained TypeScript port. For the official Python SDK, see [claude-code-sdk](https://github.com/anthropics/claude-code-sdk).
+
+📚 **AI Assistant Documentation**: See [LLM.yml](./LLM.yml) for AI-optimized documentation that helps Claude and other AI assistants understand this SDK quickly.
 
 ## Installation
 
@@ -118,8 +121,8 @@ This SDK delegates all authentication to the Claude CLI. There are two ways to a
 claude login
 ```
 
-### 2. API Key (If supported by your Claude CLI version)
-The Claude CLI may support API key authentication in some configurations. Check your Claude CLI documentation.
+### 2. Alternative Authentication Methods
+Check your Claude CLI documentation for any additional authentication methods supported by your version.
 
 **Important**: The SDK does not handle authentication directly. If you see authentication errors, you need to authenticate using the Claude CLI first.
 
@@ -194,9 +197,6 @@ interface ClaudeCodeOptions {
   // SDK options
   timeout?: number;           // Timeout in milliseconds
   debug?: boolean;            // Enable debug logging (Note: may interfere with JSON parsing)
-  
-  // Deprecated options (not used by CLI transport)
-  apiKey?: string;            // Use `claude login` instead
   baseUrl?: string;           // Not applicable for CLI
   maxTokens?: number;         // Not configurable via CLI
   temperature?: number;       // Not configurable via CLI
@@ -393,7 +393,7 @@ try {
     console.error('npm install -g @anthropic-ai/claude-code');
   } else if (error instanceof ClaudeSDKError) {
     console.error('SDK error:', error.message);
-  } else if (error.message?.includes('Invalid API key')) {
+  } else if (error.message?.includes('authentication') || error.message?.includes('unauthorized')) {
     console.error('Authentication required. Please run: claude login');
   } else {
     console.error('Unexpected error:', error);
@@ -420,41 +420,41 @@ npm run typecheck
 npm run lint
 ```
 
-## Coming Soon: Enhanced Features 🚀
+## Enhanced Features 🚀
 
-Based on valuable feedback from early adopters, we're planning exciting new features:
+The SDK now includes powerful enhanced features for production use:
 
 ### 🌊 **Token-Level Streaming**
-- Real-time UI updates with raw token chunks
-- Pause/abort controls via StreamController
-- Buffer management for partial results
-- Perfect for streaming to web interfaces
+Real-time streaming of Claude's responses, token by token
 
 ### 🚨 **Typed Error Handling**
-- Specific error classes: `RateLimitError`, `ToolPermissionError`, `ContextLengthExceededError`
-- Rich error metadata (retry times, token counts, etc.)
-- No more string pattern matching
-- Simplified retry logic
+Specific error classes with automatic detection and recovery strategies
+
+### 🔄 **Retry Strategies**
+Multiple retry patterns including exponential backoff, linear, and Fibonacci
 
 ### 🔧 **Per-Call Tool Permissions**
-- Override tool permissions for specific queries
-- Dynamic permission functions based on context
-- `.allowToolsForThisCall()` and `.denyToolsForThisCall()`
-- Fine-grained security control
+Dynamic tool permission management with context-aware decisions
 
 ### 📊 **OpenTelemetry Integration**
-- Full observability with traces and metrics
-- Automatic span creation for all operations
-- Token usage and performance metrics
-- Pluggable telemetry providers
+Full observability with traces, metrics, and distributed context
 
-### 🔄 **Exponential Backoff & Retries**
-- Built-in retry strategies with `.withRetry()`
-- Configurable backoff parameters
-- Circuit breaker pattern support
-- Automatic handling of transient failures
+### 🔐 **MCP Server Permissions**
+Control permissions at the MCP server level
 
-See [docs/ENHANCED_FEATURES_SPEC.md](./docs/ENHANCED_FEATURES_SPEC.md) for technical details and preview examples.
+### 📁 **Configuration File Support**
+Load settings from JSON or YAML files with environment variable substitution
+
+### 👤 **Roles & Personas**
+Define comprehensive roles with permissions, models, and prompting templates
+
+### 🛠️ **Advanced Response Parsing**
+Enhanced utilities for extracting and transforming responses
+
+### 📝 **Flexible Logging**
+Multiple logger implementations with custom handlers
+
+For complete documentation on all enhanced features, see [docs/ENHANCED_FEATURES.md](./docs/ENHANCED_FEATURES.md).
 
 ## Changelog
 

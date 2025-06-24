@@ -80,7 +80,7 @@ Role definitions with specific permissions and contexts:
 5. **Environment Variables**
    ```yaml
    cwd: ${HOME}/projects
-   apiKey: ${CLAUDE_API_KEY}
+   authToken: ${CLAUDE_AUTH_TOKEN}
    ```
 
 ### When to Use JSON?
@@ -132,7 +132,7 @@ Environment variables in configurations are automatically expanded:
 globalSettings:
   cwd: ${HOME}/projects      # Expands to /Users/username/projects
   env:
-    API_KEY: ${API_KEY}      # Expands from process.env.API_KEY
+    AUTH_TOKEN: ${AUTH_TOKEN} # Expands from process.env.AUTH_TOKEN
 ```
 
 ## Best Practices
@@ -161,7 +161,7 @@ globalSettings:
    - Document required environment variables
 
 5. **Security**
-   - Never commit sensitive data (API keys, passwords)
+   - Never commit sensitive data (auth tokens, passwords)
    - Use environment variables for secrets
    - Review permission settings carefully
 

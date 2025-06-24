@@ -32,10 +32,10 @@ async function demonstrateErrorHandling() {
       // Process messages
     }
   } catch (error) {
-    if (error.message?.includes('authentication') || error.message?.includes('API key')) {
+    if (error.message?.includes('authentication') || error.message?.includes('unauthorized')) {
       console.log('❌ Authentication required!');
       console.log('💡 Run: claude login');
-      console.log('📖 Or set up API key if supported\n');
+      console.log('📖 The Claude CLI handles all authentication\n');
     }
   }
   

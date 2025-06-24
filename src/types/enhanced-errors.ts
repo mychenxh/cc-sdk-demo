@@ -35,7 +35,7 @@ export class RateLimitError extends APIError {
 export class AuthenticationError extends APIError {
   constructor(
     message: string,
-    public readonly authMethod?: 'api_key' | 'oauth' | 'cli',
+    public readonly authMethod?: 'oauth' | 'cli',
     public readonly requiredAction?: string
   ) {
     super(message, 401);
@@ -307,10 +307,10 @@ export const ErrorDetectionPatterns: Record<ErrorType, RegExp[]> = {
     /too many requests/i
   ],
   authentication_error: [
-    /invalid[_\s]?api[_\s]?key/i,
     /authentication[_\s]?failed/i,
     /401/,
-    /unauthorized/i
+    /unauthorized/i,
+    /please[_\s]?login/i
   ],
   model_not_available_error: [
     /model[_\s]?not[_\s]?found/i,
@@ -365,8 +365,8 @@ export const ERROR_PATTERNS: ErrorDetectionPattern[] = [
     }
   },
   {
-    pattern: /invalid[_\s]?api[_\s]?key|authentication[_\s]?failed|401|unauthorized/i,
-    errorFactory: () => new AuthenticationError('Authentication failed', 'api_key', 'Please check your API key')
+    pattern: /authentication[_\s]?failed|401|unauthorized|please[_\s]?login/i,
+    errorFactory: () => new AuthenticationError('Authentication failed', 'cli', 'Please run: claude login')
   },
   {
     pattern: /model[_\s]?not[_\s]?found|invalid[_\s]?model|no such model/i,

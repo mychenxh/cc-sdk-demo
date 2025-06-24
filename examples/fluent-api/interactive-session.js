@@ -56,7 +56,7 @@ rl.on('line', async (input) => {
 Available commands:
   help     - Show this help message
   clear    - Clear conversation history
-  model    - Switch model (opus/sonnet/haiku)
+  model    - Switch model (opus/sonnet)
   debug    - Toggle debug mode
   tools    - Show allowed tools
   exit     - Exit the session

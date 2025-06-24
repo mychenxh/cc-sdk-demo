@@ -126,7 +126,7 @@ Configuration files support environment variable expansion:
   "globalSettings": {
     "cwd": "${HOME}/projects",
     "env": {
-      "API_KEY": "${MY_SECRET_KEY}"
+      "AUTH_TOKEN": "${MY_SECRET_TOKEN}"
     }
   }
 }

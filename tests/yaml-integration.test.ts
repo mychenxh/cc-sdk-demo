@@ -315,7 +315,7 @@ version: "1.0"
 
 globalSettings:
   env:
-    API_KEY: \${API_KEY:-default-key}
+    AUTH_TOKEN: \${AUTH_TOKEN:-default-token}
     DEBUG: \${DEBUG:-false}
     HOME: \${HOME}
 `;
@@ -327,7 +327,7 @@ globalSettings:
         version: '1.0',
         globalSettings: {
           env: {
-            API_KEY: '${API_KEY:-default-key}',
+            AUTH_TOKEN: '${AUTH_TOKEN:-default-token}',
             DEBUG: '${DEBUG:-false}',
             HOME: '${HOME}'
           }

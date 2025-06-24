@@ -405,7 +405,7 @@ globalSettings:
   defaultToolPermission: ask
   cwd: /tmp/workspace
   env:
-    API_KEY: test-key
+    AUTH_TOKEN: test-token
     DEBUG: "true"
 
 mcpServers:
@@ -440,7 +440,7 @@ tools:
           permissionMode: 'ask',
           defaultToolPermission: 'ask',
           cwd: '/tmp/workspace',
-          env: { API_KEY: 'test-key', DEBUG: 'true' }
+          env: { AUTH_TOKEN: 'test-token', DEBUG: 'true' }
         },
         mcpServers: {
           'file-system-mcp': {

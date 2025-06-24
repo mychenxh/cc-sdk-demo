@@ -175,7 +175,7 @@ describe('SubprocessCLITransport', () => {
 
     it('should include all options in command', async () => {
       const transport = new SubprocessCLITransport('test prompt', {
-        model: 'claude-3',
+        model: 'opus',
         allowedTools: ['Bash'],
         deniedTools: ['WebSearch'],
         mcpServers: [
@@ -191,7 +191,7 @@ describe('SubprocessCLITransport', () => {
 
       const lastCall = vi.mocked(execa).mock.lastCall;
       expect(lastCall?.[1]).toContain('--model');
-      expect(lastCall?.[1]).toContain('claude-3');
+      expect(lastCall?.[1]).toContain('claude-4');
       expect(lastCall?.[1]).toContain('--allowedTools');
       expect(lastCall?.[1]).toContain('Bash');
       expect(lastCall?.[1]).toContain('--disallowedTools');

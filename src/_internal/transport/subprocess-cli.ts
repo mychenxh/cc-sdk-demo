@@ -109,7 +109,7 @@ export class SubprocessCLITransport {
     // Don't pass --debug flag as it produces non-JSON output
     
     // Note: Claude CLI handles authentication internally
-    // It will use either session auth or API key based on user's setup
+    // Authentication is managed entirely by the CLI
 
     // Handle allowed/disallowed tools (Claude CLI uses camelCase flags)
     if (this.options.allowedTools && this.options.allowedTools.length > 0) {

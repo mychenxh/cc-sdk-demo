@@ -87,7 +87,7 @@ describe('Integration Tests', () => {
 
     it('should pass options to InternalClient', async () => {
       const options: ClaudeCodeOptions = {
-        model: 'claude-3-opus',
+        model: 'claude-4-opus',
         maxTokens: 2000,
         temperature: 0.5,
         allowedTools: ['Read', 'Write'],

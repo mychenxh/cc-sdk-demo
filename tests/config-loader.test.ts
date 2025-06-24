@@ -251,18 +251,18 @@ describe('ConfigLoader', () => {
         globalSettings: {
           cwd: '${HOME}/projects',
           env: {
-            API_KEY: '${MY_API_KEY}'
+            AUTH_TOKEN: '${MY_AUTH_TOKEN}'
           }
         }
       };
       
       process.env.HOME = '/users/test';
-      process.env.MY_API_KEY = 'secret123';
+      process.env.MY_AUTH_TOKEN = 'secret123';
       
       const expanded = loader.expandEnvironmentVariables(config);
       
       expect(expanded.globalSettings?.cwd).toBe('/users/test/projects');
-      expect(expanded.globalSettings?.env?.API_KEY).toBe('secret123');
+      expect(expanded.globalSettings?.env?.AUTH_TOKEN).toBe('secret123');
     });
 
     it('should handle missing environment variables', () => {
