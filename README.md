@@ -338,7 +338,7 @@ Check out the [examples directory](./examples) for complete, runnable examples i
 - **[response-parsing-demo.js](./examples/response-parsing-demo.js)** - Advanced response parsing techniques
 - **[yaml-config-demo.js](./examples/yaml-config-demo.js)** - YAML configuration examples
 - **[new-features-demo.js](./examples/new-features-demo.js)** - MCP permissions, roles, and config files
-- **[enhanced-features-preview.js](./examples/enhanced-features-preview.js)** - Preview of upcoming streaming and error features
+- **[Enhanced Features Examples](./examples/fluent-api/new-features/)** - Token streaming, error handling, and retry strategies
 - Hello World (both classic and fluent syntax)
 - File operations
 - Code analysis

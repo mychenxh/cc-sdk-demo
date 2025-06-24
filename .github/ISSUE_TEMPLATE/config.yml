@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Discord Community
+    url: https://discord.gg/claude-code
+    about: Join our Discord for questions and discussions
+  - name: Documentation
+    url: https://github.com/instantlyeasy/claude-code-sdk-ts/tree/main/docs
+    about: Check our documentation for API reference and guides
+  - name: Official Python SDK
+    url: https://github.com/anthropics/claude-code-sdk
+    about: For issues specific to the Python SDK
