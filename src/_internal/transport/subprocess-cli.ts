@@ -133,6 +133,36 @@ export class SubprocessCLITransport {
       args.push('--mcp-config', JSON.stringify(mcpConfig));
     }
 
+    // Handle MCP server permissions
+    if (this.options.mcpServerPermissions && Object.keys(this.options.mcpServerPermissions).length > 0) {
+      args.push('--mcp-server-permissions', JSON.stringify(this.options.mcpServerPermissions));
+    }
+
+    // Handle configuration file
+    if (this.options.configFile) {
+      args.push('--config-file', this.options.configFile);
+    }
+
+    // Handle role
+    if (this.options.role) {
+      args.push('--role', this.options.role);
+    }
+
+    // Handle additional context
+    if (this.options.context && this.options.context.length > 0) {
+      args.push('--context', ...this.options.context);
+    }
+
+    // Handle temperature
+    if (this.options.temperature !== undefined) {
+      args.push('--temperature', this.options.temperature.toString());
+    }
+
+    // Handle max tokens
+    if (this.options.maxTokens !== undefined) {
+      args.push('--max-tokens', this.options.maxTokens.toString());
+    }
+
     // Add --print flag (prompt will be sent via stdin)
     args.push('--print');
 
@@ -151,6 +181,7 @@ export class SubprocessCLITransport {
 
     // Debug: Log the actual command being run
     if (this.options.debug) {
+      // eslint-disable-next-line no-console
       console.error('DEBUG: Running command:', cliPath, args.join(' '));
     }
 
@@ -188,6 +219,7 @@ export class SubprocessCLITransport {
       
       stderrRl.on('line', (line) => {
         if (this.options.debug) {
+          // eslint-disable-next-line no-console
           console.error('DEBUG stderr:', line);
         }
       });
@@ -204,6 +236,7 @@ export class SubprocessCLITransport {
       if (!trimmedLine) continue;
       
       if (this.options.debug) {
+        // eslint-disable-next-line no-console
         console.error('DEBUG stdout:', trimmedLine);
       }
       
@@ -225,12 +258,13 @@ export class SubprocessCLITransport {
     // Wait for process to exit
     try {
       await this.process;
-    } catch (error: any) {
-      if (error.exitCode !== 0) {
+    } catch (error) {
+      const execError = error as { exitCode?: number; signal?: NodeJS.Signals };
+      if (execError.exitCode !== 0) {
         throw new ProcessError(
-          `Claude Code CLI exited with code ${error.exitCode}`,
-          error.exitCode,
-          error.signal
+          `Claude Code CLI exited with code ${execError.exitCode}`,
+          execError.exitCode,
+          execError.signal
         );
       }
     }

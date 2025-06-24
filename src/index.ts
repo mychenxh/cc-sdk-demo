@@ -10,7 +10,7 @@ import type { ClaudeCodeOptions, Message } from './types.js';
  * 
  * @example
  * ```typescript
- * import { query } from '@anthropic-ai/claude-code-sdk';
+ * import { query } from '@instantlyeasy/claude-code-sdk-ts';
  * 
  * for await (const message of query('Create a hello.txt file')) {
  *   console.log(message);
@@ -19,7 +19,7 @@ import type { ClaudeCodeOptions, Message } from './types.js';
  * 
  * @example
  * ```typescript
- * import { query, ClaudeCodeOptions } from '@anthropic-ai/claude-code-sdk';
+ * import { query, ClaudeCodeOptions } from '@instantlyeasy/claude-code-sdk-ts';
  * 
  * const options: ClaudeCodeOptions = {
  *   allowedTools: ['Read', 'Write'],
@@ -60,3 +60,27 @@ export {
   NullLogger,
   type LogEntry 
 } from './logger.js';
+
+// Export enhanced features (functions and classes only, types come from types.js)
+export {
+  // Error handling
+  detectErrorType,
+  createTypedError,
+  // Token streaming
+  createTokenStream,
+  TokenStreamImpl,
+  // Per-call permissions
+  createPermissionManager,
+  ToolPermissionManager,
+  // Telemetry
+  createTelemetryProvider,
+  ClaudeTelemetryProvider,
+  TelemetryUtils,
+  // Retry and backoff
+  createRetryExecutor,
+  createExponentialRetryExecutor,
+  createLinearRetryExecutor,
+  createFibonacciRetryExecutor,
+  withRetry,
+  ClaudeRetryExecutor
+} from './enhanced/index.js';

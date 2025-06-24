@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "globalSettings": {
+    "model": "opus",
+    "timeout": 60000,
+    "permissionMode": "acceptEdits",
+    "defaultToolPermission": "ask",
+    "cwd": "${HOME}/projects",
+    "env": {
+      "NODE_ENV": "development"
+    }
+  },
+  "mcpServers": {
+    "file-system-mcp": {
+      "defaultPermission": "allow",
+      "tools": {
+        "Read": "allow",
+        "Write": "deny",
+        "Edit": "ask",
+        "Delete": "deny"
+      }
+    },
+    "database-mcp": {
+      "defaultPermission": "deny",
+      "tools": {
+        "Query": "ask",
+        "Update": "deny",
+        "Delete": "deny"
+      }
+    },
+    "git-mcp": {
+      "defaultPermission": "allow"
+    },
+    "external-api-mcp": {
+      "defaultPermission": "ask"
+    }
+  },
+  "tools": {
+    "allowed": ["Read", "Grep", "LS", "Git"],
+    "denied": ["Bash", "WebSearch"]
+  }
+}

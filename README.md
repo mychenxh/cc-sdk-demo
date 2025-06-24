@@ -281,11 +281,64 @@ Pluggable logging system for better debugging:
 - Custom logger support
 - Multi-logger for sending to multiple destinations
 
+### 📁 YAML Configuration Support
+External configuration with both JSON and YAML formats:
+- **YAML Support**: Better readability with comments and multi-line strings
+- **MCP Server Permissions**: Configure permissions at the server level
+- **Role-Based Access**: Define roles with specific permissions and templates
+- **Environment Variables**: Automatic expansion of ${VAR} in configs
+
+## Configuration Files
+
+The SDK supports loading configuration from external files in both JSON and YAML formats:
+
+```javascript
+// Load YAML configuration (auto-detected by extension)
+const builder = await claude()
+  .withConfigFile('./config/mcpconfig.yaml')
+  .withRolesFile('./config/roles.yaml');
+
+// Apply a role with template variables
+builder.withRole('developer', {
+  language: 'TypeScript',
+  framework: 'React'
+});
+```
+
+### YAML Configuration Example
+
+```yaml
+# mcpconfig.yaml
+version: "1.0"
+
+globalSettings:
+  model: opus
+  timeout: 60000
+  permissionMode: acceptEdits
+
+mcpServers:
+  file-system-mcp:
+    defaultPermission: allow
+    tools:
+      Read: allow
+      Write: deny
+      Edit: ask
+
+tools:
+  allowed: [Read, Grep, LS]
+  denied: [Bash, WebSearch]
+```
+
+See [examples/config/](./examples/config/) for complete configuration examples in both formats.
+
 ## Examples
 
 Check out the [examples directory](./examples) for complete, runnable examples including:
 - **[fluent-api-demo.js](./examples/fluent-api-demo.js)** - Comprehensive showcase of the new fluent API
 - **[response-parsing-demo.js](./examples/response-parsing-demo.js)** - Advanced response parsing techniques
+- **[yaml-config-demo.js](./examples/yaml-config-demo.js)** - YAML configuration examples
+- **[new-features-demo.js](./examples/new-features-demo.js)** - MCP permissions, roles, and config files
+- **[enhanced-features-preview.js](./examples/enhanced-features-preview.js)** - Preview of upcoming streaming and error features
 - Hello World (both classic and fluent syntax)
 - File operations
 - Code analysis
@@ -367,9 +420,58 @@ npm run typecheck
 npm run lint
 ```
 
+## Coming Soon: Enhanced Features 🚀
+
+Based on valuable feedback from early adopters, we're planning exciting new features:
+
+### 🌊 **Token-Level Streaming**
+- Real-time UI updates with raw token chunks
+- Pause/abort controls via StreamController
+- Buffer management for partial results
+- Perfect for streaming to web interfaces
+
+### 🚨 **Typed Error Handling**
+- Specific error classes: `RateLimitError`, `ToolPermissionError`, `ContextLengthExceededError`
+- Rich error metadata (retry times, token counts, etc.)
+- No more string pattern matching
+- Simplified retry logic
+
+### 🔧 **Per-Call Tool Permissions**
+- Override tool permissions for specific queries
+- Dynamic permission functions based on context
+- `.allowToolsForThisCall()` and `.denyToolsForThisCall()`
+- Fine-grained security control
+
+### 📊 **OpenTelemetry Integration**
+- Full observability with traces and metrics
+- Automatic span creation for all operations
+- Token usage and performance metrics
+- Pluggable telemetry providers
+
+### 🔄 **Exponential Backoff & Retries**
+- Built-in retry strategies with `.withRetry()`
+- Configurable backoff parameters
+- Circuit breaker pattern support
+- Automatic handling of transient failures
+
+See [docs/ENHANCED_FEATURES_SPEC.md](./docs/ENHANCED_FEATURES_SPEC.md) for technical details and preview examples.
+
 ## Changelog
 
-### v0.2.0 (Latest) 🚀
+### v0.2.1 (Latest) 🚀
+**New Features:**
+- 📁 **YAML Configuration**: Support for YAML config files with auto-detection
+- 🔐 **MCP Server Permissions**: Configure permissions at the server level
+- 👥 **Role-Based Access**: Define roles with specific permissions and templates
+- 🔄 **Configuration Loading**: Load external configs with `withConfigFile()` and `withRolesFile()`
+
+**Improvements:**
+- YAML support for better config readability with comments
+- Environment variable expansion in configurations
+- Role inheritance for DRY configuration
+- Full test coverage for new configuration features
+
+### v0.2.0
 **New Features:**
 - ✨ **Fluent API**: New chainable API with `claude()` for improved developer experience
 - 📊 **Response Parsers**: Built-in methods for extracting text, JSON, and tool results

@@ -1,0 +1,165 @@
+# Role-Based Access Control Configuration
+# Define different personas with specific permissions, models, and prompting templates
+
+version: "1.0"
+
+# Default role to use if none is specified
+defaultRole: developer
+
+# Define reusable permission sets using YAML anchors
+commonPermissions: &commonPermissions
+  Read: allow
+  Grep: allow
+  LS: allow
+
+# Role definitions
+roles:
+  # General purpose developer role
+  developer:
+    description: General purpose developer role
+    model: sonnet
+    permissions:
+      mode: default
+      tools:
+        allowed:
+          - Read
+          - Write
+          - Edit
+          - Grep
+          - LS
+        denied:
+          - Delete
+    context:
+      temperature: 0.5
+      maxTokens: 4000
+      
+  # Data analysis specialist
+  dataAnalyst:
+    description: Data analysis and insights specialist
+    model: opus
+    permissions:
+      mode: acceptEdits
+      mcpServers:
+        database-mcp: whitelist
+        visualization-mcp: whitelist
+        file-system-mcp: ask
+      tools:
+        allowed:
+          - Read
+          - Query
+          - Analyze
+          - Visualize
+          - Export
+        denied:
+          - Write
+          - Edit
+          - Delete
+          - Bash
+    promptingTemplate: |
+      You are a ${domain} data analyst specializing in ${specialty}.
+      Focus on extracting meaningful insights from data.
+    systemPrompt: |
+      Always provide data-driven insights with statistical rigor.
+      Include confidence intervals and limitations of the analysis.
+    context:
+      temperature: 0.2
+      maxTokens: 6000
+      additionalContext:
+        - Focus on statistical significance
+        - Include data quality assessments
+        - Suggest follow-up analyses
+        
+  # Security-focused auditor
+  securityAuditor:
+    description: Security-focused code reviewer
+    model: opus
+    permissions:
+      mode: default
+      mcpServers:
+        file-system-mcp: whitelist
+        git-mcp: whitelist
+        security-scanner-mcp: whitelist
+        external-api-mcp: blacklist
+      tools:
+        allowed:
+          - Read
+          - Grep
+          - Analyze
+          - Scan
+        denied:
+          - Write
+          - Edit
+          - Delete
+          - Bash
+          - WebFetch
+    promptingTemplate: |
+      You are a security auditor reviewing ${language} code for ${project}.
+    systemPrompt: |
+      Focus on identifying security vulnerabilities, following OWASP guidelines.
+      Always explain the potential impact and provide remediation suggestions.
+    context:
+      temperature: 0.1
+      maxTokens: 8000
+      
+  # Creative content writer
+  contentCreator:
+    description: Creative content writer
+    model: sonnet
+    permissions:
+      mode: acceptEdits
+      tools:
+        allowed:
+          - Read
+          - Write
+          - Edit
+        denied:
+          - Delete
+          - Bash
+    promptingTemplate: |
+      You are a ${type} writer creating content about ${topic}.
+    systemPrompt: |
+      Write engaging, clear, and well-structured content.
+      Adapt your tone and style to the target audience.
+    context:
+      temperature: 0.8
+      maxTokens: 10000
+      
+  # Senior developer with inheritance
+  seniorDeveloper:
+    extends: developer
+    description: Senior developer with additional permissions
+    model: opus
+    permissions:
+      mode: acceptEdits
+      mcpServers:
+        database-mcp: ask
+        deployment-mcp: ask
+      tools:
+        allowed:
+          - TodoRead
+          - TodoWrite
+          - Git
+        denied: []
+    promptingTemplate: |
+      You are a senior ${language} developer with expertise in ${framework}.
+    context:
+      temperature: 0.4
+      maxTokens: 8000
+      
+  # Lead architect with full access
+  leadArchitect:
+    extends: seniorDeveloper
+    description: Lead architect with full system access
+    permissions:
+      mode: bypassPermissions
+      mcpServers:
+        all: whitelist
+    systemPrompt: |
+      You are the lead architect.
+      Consider system-wide implications, scalability, and long-term maintainability in all decisions.
+    context:
+      maxTokens: 12000
+      additionalContext:
+        - Consider microservices architecture
+        - Evaluate cloud-native solutions
+        - Focus on system resilience

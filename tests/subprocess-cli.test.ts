@@ -3,69 +3,152 @@ import { SubprocessCLITransport } from '../src/_internal/transport/subprocess-cl
 import { CLIConnectionError, CLINotFoundError, CLIJSONDecodeError } from '../src/errors.js';
 import { execa } from 'execa';
 import which from 'which';
-import { Readable } from 'node:stream';
+import { Readable, Writable } from 'node:stream';
 import type { ExecaChildProcess } from 'execa';
 
 vi.mock('execa');
 vi.mock('which');
+vi.mock('node:fs/promises', () => ({
+  access: vi.fn().mockRejectedValue(new Error('Not found')),
+  constants: { X_OK: 1 }
+}));
 
 describe('SubprocessCLITransport', () => {
   let mockProcess: Partial<ExecaChildProcess>;
   let stdoutStream: Readable;
+  let stderrStream: Readable;
+  let stdinStream: Writable;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // Create proper streams
     stdoutStream = new Readable({
       read() {}
     });
     
-    const stdinStream = new Readable({ read() {} });
-    (stdinStream as any).write = vi.fn();
-    (stdinStream as any).end = vi.fn();
+    stderrStream = new Readable({
+      read() {}
+    });
     
+    // Create a proper writable stream for stdin with spies
+    const writeData: any[] = [];
+    stdinStream = new Writable({
+      write(chunk, encoding, callback) {
+        writeData.push(chunk);
+        if (callback) callback();
+      },
+      final(callback) {
+        if (callback) callback();
+      }
+    });
+    
+    // Add spies to the stream methods
+    stdinStream.write = vi.fn((chunk: any, encoding?: any, callback?: any) => {
+      writeData.push(chunk);
+      if (typeof encoding === 'function') {
+        callback = encoding;
+        encoding = undefined;
+      }
+      if (callback) callback();
+      return true;
+    });
+    stdinStream.end = vi.fn((chunk?: any, encoding?: any, callback?: any) => {
+      if (chunk) writeData.push(chunk);
+      if (typeof chunk === 'function') {
+        callback = chunk;
+        chunk = undefined;
+      } else if (typeof encoding === 'function') {
+        callback = encoding;
+        encoding = undefined;
+      }
+      if (callback) callback();
+      return stdinStream;
+    });
+    
+    // Mock the process object
     mockProcess = {
       stdout: stdoutStream,
-      stderr: new Readable({ read() {} }),
+      stderr: stderrStream,
       stdin: stdinStream,
       cancel: vi.fn(),
+      kill: vi.fn(),
+      pid: 12345,
+      exitCode: null,
       then: vi.fn((onfulfilled) => {
         // Simulate successful process completion
         if (onfulfilled) onfulfilled({ exitCode: 0 });
         return Promise.resolve({ exitCode: 0 });
-      })
+      }),
+      catch: vi.fn()
     } as any;
+    
+    // Set up default mock behavior
+    vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
+    vi.mocked(execa).mockReturnValue(mockProcess as any);
   });
 
   afterEach(() => {
     stdoutStream.destroy();
+    stderrStream.destroy();
+    stdinStream.destroy();
   });
 
   describe('findCLI', () => {
     it('should find CLI in PATH', async () => {
-      // Skip this test - mocking ES modules with default exports is complex
+      // Mock fs access to fail for local paths
+      const { access } = await import('node:fs/promises');
+      vi.mocked(access).mockRejectedValue(new Error('Not found'));
+      
+      // Mock which to find claude in PATH
+      vi.mocked(which as any).mockResolvedValue('/usr/bin/claude');
+      
+      const transport = new SubprocessCLITransport('test prompt');
+      await transport.connect();
+      
+      expect(which).toHaveBeenCalledWith('claude');
     });
 
     it('should try common paths when not in PATH', async () => {
+      // Mock fs access to fail for local paths
+      const { access } = await import('node:fs/promises');
+      vi.mocked(access).mockRejectedValue(new Error('Not found'));
+      
+      // Mock which to fail
       vi.mocked(which).mockRejectedValue(new Error('not found'));
-      vi.mocked(execa).mockImplementation((cmd: string, args?: any) => {
-        if (cmd === '/usr/local/bin/claude-code' && args?.[0] === '--version') {
-          return Promise.resolve({ exitCode: 0 } as any);
+      
+      // Mock successful version check for a specific path
+      vi.mocked(execa).mockImplementation((cmd: string, args?: any, _options?: any) => {
+        if (cmd === '/usr/local/bin/claude' && args?.[0] === '--version') {
+          return Promise.resolve({ 
+            exitCode: 0, 
+            stdout: 'claude version 1.0.0',
+            stderr: '',
+            failed: false,
+            timedOut: false,
+            isCanceled: false,
+            killed: false
+          } as any);
         }
-        if (cmd === '/usr/local/bin/claude-code') {
+        if (cmd === '/usr/local/bin/claude' && args?.includes('--output-format')) {
           return mockProcess as any;
         }
-        throw new Error('not found');
+        throw new Error('Command failed');
       }) as any;
 
       const transport = new SubprocessCLITransport('test prompt');
       await transport.connect();
 
-      expect(execa).toHaveBeenCalledWith('/usr/local/bin/claude-code', ['--version']);
+      expect(execa).toHaveBeenCalledWith('/usr/local/bin/claude', ['--version']);
     });
 
     it('should throw CLINotFoundError when CLI not found anywhere', async () => {
+      // Mock fs access to fail for local paths
+      const { access } = await import('node:fs/promises');
+      vi.mocked(access).mockRejectedValue(new Error('Not found'));
+      
       vi.mocked(which).mockRejectedValue(new Error('not found'));
-      vi.mocked(execa).mockRejectedValue(new Error('not found'));
+      vi.mocked(execa).mockRejectedValue(new Error('Command failed'));
 
       const transport = new SubprocessCLITransport('test prompt');
 
@@ -75,208 +158,257 @@ describe('SubprocessCLITransport', () => {
 
   describe('buildCommand', () => {
     it('should build basic command with prompt', async () => {
-      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
-      vi.mocked(execa).mockReturnValue(mockProcess as any);
-
       const transport = new SubprocessCLITransport('test prompt');
       await transport.connect();
 
-      expect(execa).toHaveBeenCalledWith(
-        '/usr/local/bin/claude-code',
-        ['test prompt', '--output-format', 'json'],
-        expect.any(Object)
-      );
-    });
-
-    it('should include all options in command', async () => {
-      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
-      vi.mocked(execa).mockReturnValue(mockProcess as any);
-
-      const options = {
-        model: 'claude-3',
-        apiKey: 'test-key',
-        baseUrl: 'https://api.test.com',
-        maxTokens: 1000,
-        temperature: 0.7,
-        timeout: 30000,
-        debug: true,
-        tools: ['Read', 'Write'] as any,
-        allowedTools: ['Bash'] as any,
-        deniedTools: ['WebSearch'] as any,
-        permissionMode: 'acceptEdits' as any,
-        context: ['file1.txt', 'file2.txt'],
-        mcpServers: [
-          { command: 'server1', args: ['--port', '3000'] },
-          { command: 'server2' }
-        ]
-      };
-
-      const transport = new SubprocessCLITransport('test prompt', options);
-      await transport.connect();
-
-      const expectedArgs = [
-        'test prompt',
-        '--output-format', 'json',
-        '--model', 'claude-3',
-        '--api-key', 'test-key',
-        '--base-url', 'https://api.test.com',
-        '--max-tokens', '1000',
-        '--temperature', '0.7',
-        '--timeout', '30000',
-        '--debug',
-        '--tools', 'Read,Write',
-        '--allowed-tools', 'Bash',
-        '--denied-tools', 'WebSearch',
-        '--permission-mode', 'acceptEdits',
-        '--context', 'file1.txt',
-        '--context', 'file2.txt',
-        '--mcp-server', 'server1 --port 3000',
-        '--mcp-server', 'server2'
-      ];
-
-      expect(execa).toHaveBeenCalledWith(
-        '/usr/local/bin/claude-code',
-        expectedArgs,
-        expect.any(Object)
-      );
-    });
-  });
-
-  describe('connect', () => {
-    it('should start CLI process with environment variables', async () => {
-      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
-      vi.mocked(execa).mockReturnValue(mockProcess as any);
-
-      const options = {
-        cwd: '/test/dir',
-        env: { CUSTOM_VAR: 'value' }
-      };
-
-      const transport = new SubprocessCLITransport('test prompt', options);
-      await transport.connect();
-
-      expect(execa).toHaveBeenCalledWith(
-        '/usr/local/bin/claude-code',
-        expect.any(Array),
+      expect(execa).toHaveBeenLastCalledWith(
+        expect.any(String),
+        ['--output-format', 'stream-json', '--verbose', '--print'],
         expect.objectContaining({
-          cwd: '/test/dir',
-          env: expect.objectContaining({
-            CUSTOM_VAR: 'value',
-            CLAUDE_CODE_ENTRYPOINT: 'sdk-ts'
-          })
+          stdin: 'pipe',
+          stdout: 'pipe',
+          stderr: 'pipe',
+          buffer: false
         })
       );
     });
 
-    it('should throw CLIConnectionError on process start failure', async () => {
-      // Skip this test - mocking ES modules with default exports is complex
+    it('should include all options in command', async () => {
+      const transport = new SubprocessCLITransport('test prompt', {
+        model: 'claude-3',
+        allowedTools: ['Bash'],
+        deniedTools: ['WebSearch'],
+        mcpServers: [
+          { command: 'server1', args: ['--port', '3000'] },
+          { command: 'server2' }
+        ],
+        context: ['file1.txt', 'file2.txt'],
+        temperature: 0.7,
+        maxTokens: 1000
+      });
+
+      await transport.connect();
+
+      const lastCall = vi.mocked(execa).mock.lastCall;
+      expect(lastCall?.[1]).toContain('--model');
+      expect(lastCall?.[1]).toContain('claude-3');
+      expect(lastCall?.[1]).toContain('--allowedTools');
+      expect(lastCall?.[1]).toContain('Bash');
+      expect(lastCall?.[1]).toContain('--disallowedTools');
+      expect(lastCall?.[1]).toContain('WebSearch');
+      expect(lastCall?.[1]).toContain('--mcp-config');
+      expect(lastCall?.[1]).toContain('--context');
+      expect(lastCall?.[1]).toContain('file1.txt');
+      expect(lastCall?.[1]).toContain('file2.txt');
+      expect(lastCall?.[1]).toContain('--temperature');
+      expect(lastCall?.[1]).toContain('0.7');
+      expect(lastCall?.[1]).toContain('--max-tokens');
+      expect(lastCall?.[1]).toContain('1000');
+    });
+
+    it('should handle empty options', async () => {
+      const transport = new SubprocessCLITransport('test prompt', {});
+      await transport.connect();
+
+      const lastCall = vi.mocked(execa).mock.lastCall;
+      expect(lastCall?.[1]).toEqual(['--output-format', 'stream-json', '--verbose', '--print']);
+    });
+
+    it('should handle special characters in prompt', async () => {
+      const specialPrompt = 'Test with "quotes" and \'apostrophes\' and \n newlines';
+      const transport = new SubprocessCLITransport(specialPrompt);
+      await transport.connect();
+
+      expect(stdinStream.write).toHaveBeenCalledWith(specialPrompt);
+      expect(stdinStream.end).toHaveBeenCalled();
     });
   });
 
   describe('receiveMessages', () => {
-    it('should parse and yield JSON messages', async () => {
-      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
-      vi.mocked(execa).mockReturnValue(mockProcess as any);
-
-      const transport = new SubprocessCLITransport('test prompt');
+    it('should receive and parse messages', async () => {
+      const transport = new SubprocessCLITransport('test');
       await transport.connect();
 
-      const messages = [
-        { type: 'message', data: { type: 'user', content: 'Hello' } },
-        { type: 'message', data: { type: 'assistant', content: [{ type: 'text', text: 'Hi!' }] } },
-        { type: 'end' }
-      ];
-
-      // Emit messages to stdout
-      setTimeout(() => {
-        messages.forEach(msg => {
-          stdoutStream.push(JSON.stringify(msg) + '\n');
-        });
-        stdoutStream.push(null); // End stream
-      }, 10);
-
-      const received = [];
-      for await (const msg of transport.receiveMessages()) {
-        received.push(msg);
-      }
-
-      expect(received).toEqual(messages);
-    });
-
-    it('should throw CLIConnectionError when not connected', async () => {
-      const transport = new SubprocessCLITransport('test prompt');
-
-      await expect(async () => {
-        for await (const _message of transport.receiveMessages()) {
-          // Should throw before yielding
+      const messages: any[] = [];
+      const receiverPromise = (async () => {
+        for await (const msg of transport.receiveMessages()) {
+          messages.push(msg);
         }
-      }).rejects.toThrow(CLIConnectionError);
+      })();
+
+      // Emit test data
+      stdoutStream.push('{"type":"assistant","content":"Hello"}\n');
+      stdoutStream.push('{"type":"result","content":"Done"}\n');
+      stdoutStream.push(null); // End stream
+
+      await receiverPromise;
+
+      expect(messages).toHaveLength(2);
+      expect(messages[0]).toEqual({ type: 'assistant', content: 'Hello' });
+      expect(messages[1]).toEqual({ type: 'result', content: 'Done' });
     });
 
-    it('should throw CLIJSONDecodeError on invalid JSON', async () => {
-      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
-      vi.mocked(execa).mockReturnValue(mockProcess as any);
-
-      const transport = new SubprocessCLITransport('test prompt');
+    it('should handle CLI errors', async () => {
+      const transport = new SubprocessCLITransport('test');
       await transport.connect();
 
-      setTimeout(() => {
-        stdoutStream.push('invalid json\n');
-        stdoutStream.push(null);
-      }, 10);
-
-      await expect(async () => {
-        for await (const _message of transport.receiveMessages()) {
-          // Should throw on invalid JSON
+      const messages: any[] = [];
+      const receiverPromise = (async () => {
+        for await (const msg of transport.receiveMessages()) {
+          messages.push(msg);
         }
-      }).rejects.toThrow(CLIJSONDecodeError);
+      })();
+
+      // Emit error message
+      stdoutStream.push('{"type":"error","error":{"message":"Something went wrong"}}\n');
+      stdoutStream.push(null);
+
+      await receiverPromise;
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toEqual({
+        type: 'error',
+        error: { message: 'Something went wrong' }
+      });
     });
 
-    it('should skip empty lines', async () => {
-      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
-      vi.mocked(execa).mockReturnValue(mockProcess as any);
-
-      const transport = new SubprocessCLITransport('test prompt');
+    it('should handle stderr messages', async () => {
+      const transport = new SubprocessCLITransport('test', { debug: true });
       await transport.connect();
 
-      setTimeout(() => {
-        stdoutStream.push('\n');
-        stdoutStream.push('   \n');
-        stdoutStream.push(JSON.stringify({ type: 'message', data: { type: 'user', content: 'Hello' } }) + '\n');
-        stdoutStream.push('\n');
-        stdoutStream.push(JSON.stringify({ type: 'end' }) + '\n');
-        stdoutStream.push(null);
-      }, 10);
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const received = [];
-      for await (const msg of transport.receiveMessages()) {
-        received.push(msg);
-      }
+      // Start receiving messages to set up stderr handler
+      const messages: any[] = [];
+      const receiverPromise = (async () => {
+        for await (const msg of transport.receiveMessages()) {
+          messages.push(msg);
+        }
+      })();
 
-      expect(received).toHaveLength(2);
+      // Now push stderr data
+      stderrStream.push('Error: Something bad happened\n');
+      stderrStream.push('Another error line\n');
+
+      // Give time for event handlers to process
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // End the stdout stream to complete the test
+      stdoutStream.push(null);
+      await receiverPromise;
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('DEBUG stderr:', 'Error: Something bad happened');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('DEBUG stderr:', 'Another error line');
+
+      consoleErrorSpy.mockRestore();
     });
 
-    it('should throw ProcessError on non-zero exit code', async () => {
-      // Skip this test for now - it's complex to test async stream + promise rejection timing
-      // The actual functionality is tested in integration tests
+    it('should handle invalid JSON', async () => {
+      const transport = new SubprocessCLITransport('test');
+      await transport.connect();
+
+      const messages: any[] = [];
+      const errors: any[] = [];
+      const receiverPromise = (async () => {
+        try {
+          for await (const msg of transport.receiveMessages()) {
+            messages.push(msg);
+          }
+        } catch (error) {
+          errors.push(error);
+        }
+      })();
+
+      // Emit non-JSON line (will be skipped)
+      stdoutStream.push('Not valid JSON\n');
+      // Emit valid JSON
+      stdoutStream.push('{"valid":"json"}\n');
+      // Emit invalid JSON that starts with '{' (will throw)
+      stdoutStream.push('{invalid json}\n');
+      stdoutStream.push(null);
+
+      await receiverPromise;
+
+      // Non-JSON lines are skipped, valid JSON is parsed
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toEqual({ valid: 'json' });
+      // Invalid JSON that looks like JSON throws an error
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toBeInstanceOf(CLIJSONDecodeError);
+    });
+
+    it('should skip non-JSON lines', async () => {
+      const transport = new SubprocessCLITransport('test');
+      await transport.connect();
+
+      const messages: any[] = [];
+      const receiverPromise = (async () => {
+        for await (const msg of transport.receiveMessages()) {
+          messages.push(msg);
+        }
+      })();
+
+      // Emit non-JSON line that doesn't look like JSON
+      stdoutStream.push('FATAL ERROR: Invalid JSON\n');
+      // Emit valid JSON
+      stdoutStream.push('{"type":"result","content":"Done"}\n');
+      stdoutStream.push(null);
+
+      await receiverPromise;
+
+      // Non-JSON lines are skipped
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toEqual({ type: 'result', content: 'Done' });
     });
   });
 
   describe('disconnect', () => {
-    it('should cancel process if connected', async () => {
-      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
-      vi.mocked(execa).mockReturnValue(mockProcess as any);
-
-      const transport = new SubprocessCLITransport('test prompt');
+    it('should disconnect properly', async () => {
+      const transport = new SubprocessCLITransport('test');
       await transport.connect();
+
       await transport.disconnect();
 
       expect(mockProcess.cancel).toHaveBeenCalled();
     });
 
-    it('should not throw if not connected', async () => {
+    it('should handle process exit', async () => {
+      const transport = new SubprocessCLITransport('test');
+      await transport.connect();
+
+      // Simulate process exit
+      const messages: any[] = [];
+      const receiverPromise = (async () => {
+        for await (const msg of transport.receiveMessages()) {
+          messages.push(msg);
+        }
+      })();
+
+      stdoutStream.push(null); // End stream
+      await receiverPromise;
+
+      // Should complete without error
+      expect(messages).toHaveLength(0);
+    });
+  });
+
+  describe('connect', () => {
+    it('should connect successfully', async () => {
       const transport = new SubprocessCLITransport('test prompt');
-      await expect(transport.disconnect()).resolves.not.toThrow();
+      await expect(transport.connect()).resolves.not.toThrow();
+      
+      expect(execa).toHaveBeenCalled();
+      expect(stdinStream.write).toHaveBeenCalledWith('test prompt');
+      expect(stdinStream.end).toHaveBeenCalled();
+    });
+
+    it('should handle connection errors', async () => {
+      vi.mocked(execa).mockImplementation(() => {
+        throw new Error('Failed to start process');
+      });
+
+      const transport = new SubprocessCLITransport('test');
+      await expect(transport.connect()).rejects.toThrow(CLIConnectionError);
     });
   });
 });

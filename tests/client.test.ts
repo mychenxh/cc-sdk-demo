@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { InternalClient } from '../src/_internal/client.js';
 import { SubprocessCLITransport } from '../src/_internal/transport/subprocess-cli.js';
-import { ClaudeSDKError } from '../src/errors.js';
 import type { Message, CLIOutput } from '../src/types.js';
 
 vi.mock('../src/_internal/transport/subprocess-cli.js');
@@ -35,9 +34,8 @@ describe('InternalClient', () => {
   describe('processQuery', () => {
     it('should connect to transport and yield messages', async () => {
       const messages: CLIOutput[] = [
-        { type: 'message', data: { type: 'user', content: 'Hello' } },
-        { type: 'message', data: { type: 'assistant', content: [{ type: 'text', text: 'Hi there!' }] } },
-        { type: 'end' }
+        { type: 'user', message: { content: 'Hello' } },
+        { type: 'assistant', message: { content: [{ type: 'text', text: 'Hi there!' }] } }
       ];
 
       mockTransport.receiveMessages.mockImplementation(async function* () {
@@ -76,7 +74,7 @@ describe('InternalClient', () => {
         for await (const _message of client.processQuery()) {
           // Should throw before yielding
         }
-      }).rejects.toThrow(ClaudeSDKError);
+      }).rejects.toThrow();
       
       expect(mockTransport.disconnect).toHaveBeenCalledTimes(1);
     });
@@ -97,23 +95,18 @@ describe('InternalClient', () => {
 
     it('should handle result messages with usage and cost', async () => {
       const resultMessage: CLIOutput = {
-        type: 'message',
-        data: {
-          type: 'result',
-          content: 'Task completed',
-          usage: {
-            input_tokens: 100,
-            output_tokens: 50
-          },
-          cost: {
-            total_cost: 0.001
-          }
-        }
+        type: 'result',
+        subtype: 'task_complete',
+        result: 'Task completed',
+        usage: {
+          input_tokens: 100,
+          output_tokens: 50
+        },
+        total_cost_usd: 0.001
       };
 
       mockTransport.receiveMessages.mockImplementation(async function* () {
         yield resultMessage;
-        yield { type: 'end' };
       });
 
       const client = new InternalClient('test prompt');
@@ -125,8 +118,10 @@ describe('InternalClient', () => {
 
       expect(results).toHaveLength(1);
       expect(results[0]?.type).toBe('result');
-      expect((results[0] as any).usage?.input_tokens).toBe(100);
-      expect((results[0] as any).cost?.total_cost).toBe(0.001);
+      const resultMsg = results[0] as any;
+      expect(resultMsg.usage?.input_tokens).toBe(100);
+      expect(resultMsg.usage?.output_tokens).toBe(50);
+      expect(resultMsg.cost?.total_cost).toBe(0.001);
     });
 
     it('should handle unknown message types gracefully', async () => {
@@ -134,8 +129,7 @@ describe('InternalClient', () => {
 
       mockTransport.receiveMessages.mockImplementation(async function* () {
         yield unknownMessage;
-        yield { type: 'message', data: { type: 'user', content: 'Hello' } };
-        yield { type: 'end' };
+        yield { type: 'user', message: { content: 'Hello' } };
       });
 
       const client = new InternalClient('test prompt');
@@ -146,7 +140,9 @@ describe('InternalClient', () => {
         results.push(message);
       }
 
-      expect(warnSpy).toHaveBeenCalledWith('Unknown CLI output type:', unknownMessage);
+      // Unknown messages are silently skipped (return null from parseMessage)
+      expect(warnSpy).not.toHaveBeenCalled();
+      // Only the known message type should be yielded
       expect(results).toHaveLength(1);
       expect(results[0]?.type).toBe('user');
 

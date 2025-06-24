@@ -1,7 +1,20 @@
 import { query as baseQuery } from './index.js';
-import type { ClaudeCodeOptions, Message, ToolName, PermissionMode } from './types.js';
+import type { 
+  ClaudeCodeOptions, 
+  Message, 
+  ToolName, 
+  PermissionMode,
+  MCPServerPermission,
+  MCPServerPermissionConfig,
+  MCPConfigSchema,
+  RoleDefinition,
+  ContentBlock
+} from './types.js';
 import { ResponseParser } from './parser.js';
 import { Logger } from './logger.js';
+import { PermissionManager } from './permissions/manager.js';
+import { ConfigLoader } from './config/loader.js';
+import { RoleManager } from './roles/manager.js';
 
 /**
  * Fluent API for building Claude Code queries with chainable methods
@@ -22,6 +35,17 @@ export class QueryBuilder {
   private options: ClaudeCodeOptions = {};
   private messageHandlers: Array<(message: Message) => void> = [];
   private logger?: Logger;
+  private permissionManager: PermissionManager;
+  private configLoader: ConfigLoader;
+  private roleManager: RoleManager;
+  private rolePromptingTemplate?: string;
+  private roleTemplateVariables?: Record<string, string>;
+
+  constructor() {
+    this.permissionManager = new PermissionManager();
+    this.configLoader = new ConfigLoader();
+    this.roleManager = new RoleManager();
+  }
 
   /**
    * Set the model to use
@@ -130,10 +154,10 @@ export class QueryBuilder {
   /**
    * Add handler for specific message type
    */
-  onAssistant(handler: (content: any) => void): this {
+  onAssistant(handler: (content: ContentBlock[]) => void): this {
     this.messageHandlers.push((msg) => {
       if (msg.type === 'assistant') {
-        handler((msg as any).content);
+        handler(msg.content);
       }
     });
     return this;
@@ -142,7 +166,7 @@ export class QueryBuilder {
   /**
    * Add handler for tool usage
    */
-  onToolUse(handler: (tool: { name: string; input: any }) => void): this {
+  onToolUse(handler: (tool: { name: string; input: Record<string, unknown> }) => void): this {
     this.messageHandlers.push((msg) => {
       if (msg.type === 'assistant') {
         for (const block of msg.content) {
@@ -156,11 +180,122 @@ export class QueryBuilder {
   }
 
   /**
+   * Set MCP server permission
+   */
+  withMCPServerPermission(serverName: string, permission: MCPServerPermission): this {
+    this.permissionManager.setMCPServerPermission(serverName, permission);
+    return this;
+  }
+
+  /**
+   * Set multiple MCP server permissions
+   */
+  withMCPServerPermissions(permissions: MCPServerPermissionConfig): this {
+    this.permissionManager.setMCPServerPermissions(permissions);
+    return this;
+  }
+
+  /**
+   * Load configuration from file
+   */
+  async withConfigFile(filePath: string): Promise<this> {
+    const config = await this.configLoader.loadFromFile(filePath);
+    this.applyConfig(config);
+    return this;
+  }
+
+  /**
+   * Apply configuration object
+   */
+  withConfig(config: MCPConfigSchema): this {
+    this.configLoader.validateConfig(config);
+    this.applyConfig(config);
+    return this;
+  }
+
+  /**
+   * Load roles from file
+   */
+  async withRolesFile(filePath: string): Promise<this> {
+    await this.roleManager.loadFromFile(filePath);
+    return this;
+  }
+
+  /**
+   * Apply a role by name
+   */
+  withRole(roleName: string): this;
+  /**
+   * Apply a role definition directly with template variables
+   */
+  withRole(role: RoleDefinition, templateVariables?: Record<string, string>): this;
+  withRole(
+    roleOrName: string | RoleDefinition, 
+    templateVariables?: Record<string, string>
+  ): this {
+    if (typeof roleOrName === 'string') {
+      const options = this.roleManager.applyRole(roleOrName, this.options);
+      this.options = options;
+      
+      // Store role template info if available
+      const role = this.roleManager.getRole(roleOrName);
+      if (role?.promptingTemplate) {
+        this.rolePromptingTemplate = role.promptingTemplate;
+      }
+      if (role?.systemPrompt) {
+        this.options.systemPrompt = role.systemPrompt;
+      }
+    } else {
+      // Add role to manager and apply
+      this.roleManager.addRole(roleOrName);
+      const options = this.roleManager.applyRole(roleOrName.name, this.options);
+      this.options = options;
+      
+      if (roleOrName.promptingTemplate) {
+        this.rolePromptingTemplate = roleOrName.promptingTemplate;
+        this.roleTemplateVariables = templateVariables;
+      }
+      if (roleOrName.systemPrompt) {
+        this.options.systemPrompt = roleOrName.systemPrompt;
+      }
+    }
+    
+    return this;
+  }
+
+  /**
+   * Apply configuration to options
+   */
+  private applyConfig(config: MCPConfigSchema): void {
+    this.options = this.configLoader.mergeWithOptions(config, this.options);
+  }
+
+  /**
    * Execute query and return response parser
    */
   query(prompt: string): ResponseParser {
+    // Apply MCP server permissions
+    const finalOptions = this.permissionManager.applyToOptions(this.options);
+    
+    // Apply prompting template if available
+    let finalPrompt = prompt;
+    if (this.rolePromptingTemplate && this.roleTemplateVariables) {
+      const templatedPrompt = this.rolePromptingTemplate.replace(
+        /\$\{([^}]+)\}/g, 
+        (match, varName) => this.roleTemplateVariables![varName] || match
+      );
+      
+      if (finalOptions.systemPrompt) {
+        finalPrompt = `${finalOptions.systemPrompt}\n\n${templatedPrompt}\n\n${prompt}`;
+      } else {
+        finalPrompt = `${templatedPrompt}\n\n${prompt}`;
+      }
+    } else if (finalOptions.systemPrompt) {
+      finalPrompt = `${finalOptions.systemPrompt}\n\n${prompt}`;
+    }
+    
     const parser = new ResponseParser(
-      baseQuery(prompt, this.options),
+      baseQuery(finalPrompt, finalOptions),
       this.messageHandlers,
       this.logger
     );
@@ -171,9 +306,29 @@ export class QueryBuilder {
    * Execute query and return raw async generator (for backward compatibility)
    */
   async *queryRaw(prompt: string): AsyncGenerator<Message> {
-    this.logger?.info('Starting query', { prompt, options: this.options });
+    // Apply MCP server permissions
+    const finalOptions = this.permissionManager.applyToOptions(this.options);
     
-    for await (const message of baseQuery(prompt, this.options)) {
+    // Apply prompting template if available
+    let finalPrompt = prompt;
+    if (this.rolePromptingTemplate && this.roleTemplateVariables) {
+      const templatedPrompt = this.rolePromptingTemplate.replace(
+        /\$\{([^}]+)\}/g, 
+        (match, varName) => this.roleTemplateVariables![varName] || match
+      );
+      
+      if (finalOptions.systemPrompt) {
+        finalPrompt = `${finalOptions.systemPrompt}\n\n${templatedPrompt}\n\n${prompt}`;
+      } else {
+        finalPrompt = `${templatedPrompt}\n\n${prompt}`;
+      }
+    } else if (finalOptions.systemPrompt) {
+      finalPrompt = `${finalOptions.systemPrompt}\n\n${prompt}`;
+    }
+    
+    this.logger?.info('Starting query', { prompt: finalPrompt, options: finalOptions });
+    
+    for await (const message of baseQuery(finalPrompt, finalOptions)) {
       this.logger?.debug('Received message', { type: message.type });
       
       // Run handlers

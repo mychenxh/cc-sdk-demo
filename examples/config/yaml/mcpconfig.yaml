@@ -1,0 +1,53 @@
+# MCP Server-Level Permission Configuration
+# This file demonstrates how to configure permissions for Model Context Protocol servers
+
+version: "1.0"
+
+# Global settings that apply to all operations
+globalSettings:
+  model: opus
+  timeout: 60000
+  permissionMode: acceptEdits
+  defaultToolPermission: ask
+  cwd: ${HOME}/projects
+  env:
+    NODE_ENV: development
+
+# MCP Server configurations
+# Each server can have its own default permission and tool-specific overrides
+mcpServers:
+  # File system operations server
+  file-system-mcp:
+    defaultPermission: allow
+    tools:
+      Read: allow
+      Write: deny
+      Edit: ask
+      Delete: deny
+      
+  # Database operations server  
+  database-mcp:
+    defaultPermission: deny
+    tools:
+      Query: ask
+      Update: deny
+      Delete: deny
+      
+  # Git operations server
+  git-mcp:
+    defaultPermission: allow
+    
+  # External API server
+  external-api-mcp:
+    defaultPermission: ask
+
+# Global tool permissions (independent of MCP servers)
+tools:
+  allowed:
+    - Read
+    - Grep
+    - LS
+    - Git
+  denied:
+    - Bash
+    - WebSearch

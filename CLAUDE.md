@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an unofficial TypeScript SDK for Claude Code (`@anthropic-ai/claude-code-sdk`). It provides a type-safe wrapper around the Claude Code CLI, allowing developers to programmatically interact with Claude's capabilities.
+This is an unofficial TypeScript SDK for Claude Code (`@instantlyeasy/claude-code-sdk-ts`). It provides a type-safe wrapper around the Claude Code CLI, allowing developers to programmatically interact with Claude's capabilities.
 
 ## Essential Commands
 

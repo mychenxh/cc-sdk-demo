@@ -5,23 +5,25 @@
     "description": "Example configurations for Claude Code SDK"
   },
   "sdk": {
+    "apiVersion": "v1",
     "timeout": 30000,
     "maxRetries": 3,
-    "streamMessages": true
+    "streamingEnabled": true
   },
   "claude": {
-    "model": "claude-3-opus-20240229",
+    "model": "claude-3-sonnet-20240229",
+    "maxTokens": 4096,
     "temperature": 0.7,
-    "maxTokens": 4096
+    "systemPrompt": "You are a helpful assistant"
   },
   "logging": {
     "level": "info",
     "format": "json",
-    "outputPath": "./logs"
+    "enabled": true
   },
   "development": {
     "debug": false,
-    "verboseErrors": true,
+    "verbose": false,
     "mockMode": false
   }
 }

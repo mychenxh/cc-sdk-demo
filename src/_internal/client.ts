@@ -1,6 +1,6 @@
 import { SubprocessCLITransport } from './transport/subprocess-cli.js';
 import type { ClaudeCodeOptions, Message } from '../types.js';
-import { ClaudeSDKError } from '../errors.js';
+import { detectErrorType, createTypedError } from '../errors.js';
 
 export class InternalClient {
   private options: ClaudeCodeOptions;
@@ -28,7 +28,7 @@ export class InternalClient {
     }
   }
 
-  private parseMessage(output: any): Message | null {
+  private parseMessage(output: Record<string, unknown>): Message | null {
     // Handle stream-json format directly from CLI
     switch (output.type) {
       case 'user':
@@ -61,8 +61,11 @@ export class InternalClient {
           }
         };
       
-      case 'error':
-        throw new ClaudeSDKError(`CLI error: ${output.error?.message || 'Unknown error'}`);
+      case 'error': {
+        const errorMessage = (output.error as { message?: string })?.message || 'Unknown error';
+        const errorType = detectErrorType(errorMessage);
+        throw createTypedError(errorType, errorMessage, output.error as { code?: string; stack?: string });
+      }
       
       default:
         // Skip unknown message types

@@ -16,7 +16,7 @@ export interface LogEntry {
   level: LogLevel;
   message: string;
   timestamp: Date;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   error?: Error;
 }
 
@@ -45,11 +45,11 @@ export interface Logger {
   /**
    * Convenience methods
    */
-  error(message: string, context?: Record<string, any>): void;
-  warn(message: string, context?: Record<string, any>): void;
-  info(message: string, context?: Record<string, any>): void;
-  debug(message: string, context?: Record<string, any>): void;
-  trace(message: string, context?: Record<string, any>): void;
+  error(message: string, context?: Record<string, unknown>): void;
+  warn(message: string, context?: Record<string, unknown>): void;
+  info(message: string, context?: Record<string, unknown>): void;
+  debug(message: string, context?: Record<string, unknown>): void;
+  trace(message: string, context?: Record<string, unknown>): void;
 }
 
 /**
@@ -68,7 +68,7 @@ export class ConsoleLogger implements Logger {
     const level = LogLevel[entry.level];
     const prefix = `${timestamp} ${this.prefix} ${level}`;
     
-    const args: any[] = [`${prefix}: ${entry.message}`];
+    const args: unknown[] = [`${prefix}: ${entry.message}`];
     
     if (entry.context && Object.keys(entry.context).length > 0) {
       args.push(entry.context);
@@ -95,7 +95,7 @@ export class ConsoleLogger implements Logger {
     }
   }
 
-  error(message: string, context?: Record<string, any>): void {
+  error(message: string, context?: Record<string, unknown>): void {
     this.log({
       level: LogLevel.ERROR,
       message,
@@ -105,7 +105,7 @@ export class ConsoleLogger implements Logger {
     });
   }
 
-  warn(message: string, context?: Record<string, any>): void {
+  warn(message: string, context?: Record<string, unknown>): void {
     this.log({
       level: LogLevel.WARN,
       message,
@@ -114,7 +114,7 @@ export class ConsoleLogger implements Logger {
     });
   }
 
-  info(message: string, context?: Record<string, any>): void {
+  info(message: string, context?: Record<string, unknown>): void {
     this.log({
       level: LogLevel.INFO,
       message,
@@ -123,7 +123,7 @@ export class ConsoleLogger implements Logger {
     });
   }
 
-  debug(message: string, context?: Record<string, any>): void {
+  debug(message: string, context?: Record<string, unknown>): void {
     this.log({
       level: LogLevel.DEBUG,
       message,
@@ -132,7 +132,7 @@ export class ConsoleLogger implements Logger {
     });
   }
 
-  trace(message: string, context?: Record<string, any>): void {
+  trace(message: string, context?: Record<string, unknown>): void {
     this.log({
       level: LogLevel.TRACE,
       message,
@@ -171,7 +171,7 @@ export class JSONLogger implements Logger {
     this.output(JSON.stringify(logObject));
   }
 
-  error(message: string, context?: Record<string, any>): void {
+  error(message: string, context?: Record<string, unknown>): void {
     this.log({
       level: LogLevel.ERROR,
       message,
@@ -181,7 +181,7 @@ export class JSONLogger implements Logger {
     });
   }
 
-  warn(message: string, context?: Record<string, any>): void {
+  warn(message: string, context?: Record<string, unknown>): void {
     this.log({
       level: LogLevel.WARN,
       message,
@@ -190,7 +190,7 @@ export class JSONLogger implements Logger {
     });
   }
 
-  info(message: string, context?: Record<string, any>): void {
+  info(message: string, context?: Record<string, unknown>): void {
     this.log({
       level: LogLevel.INFO,
       message,
@@ -199,7 +199,7 @@ export class JSONLogger implements Logger {
     });
   }
 
-  debug(message: string, context?: Record<string, any>): void {
+  debug(message: string, context?: Record<string, unknown>): void {
     this.log({
       level: LogLevel.DEBUG,
       message,
@@ -208,7 +208,7 @@ export class JSONLogger implements Logger {
     });
   }
 
-  trace(message: string, context?: Record<string, any>): void {
+  trace(message: string, context?: Record<string, unknown>): void {
     this.log({
       level: LogLevel.TRACE,
       message,
@@ -234,7 +234,7 @@ export class MultiLogger implements Logger {
     }
   }
 
-  error(message: string, context?: Record<string, any>): void {
+  error(message: string, context?: Record<string, unknown>): void {
     for (const logger of this.loggers) {
       try {
         logger.error(message, context);
@@ -244,7 +244,7 @@ export class MultiLogger implements Logger {
     }
   }
 
-  warn(message: string, context?: Record<string, any>): void {
+  warn(message: string, context?: Record<string, unknown>): void {
     for (const logger of this.loggers) {
       try {
         logger.warn(message, context);
@@ -254,7 +254,7 @@ export class MultiLogger implements Logger {
     }
   }
 
-  info(message: string, context?: Record<string, any>): void {
+  info(message: string, context?: Record<string, unknown>): void {
     for (const logger of this.loggers) {
       try {
         logger.info(message, context);
@@ -264,7 +264,7 @@ export class MultiLogger implements Logger {
     }
   }
 
-  debug(message: string, context?: Record<string, any>): void {
+  debug(message: string, context?: Record<string, unknown>): void {
     for (const logger of this.loggers) {
       try {
         logger.debug(message, context);
@@ -274,7 +274,7 @@ export class MultiLogger implements Logger {
     }
   }
 
-  trace(message: string, context?: Record<string, any>): void {
+  trace(message: string, context?: Record<string, unknown>): void {
     for (const logger of this.loggers) {
       try {
         logger.trace(message, context);

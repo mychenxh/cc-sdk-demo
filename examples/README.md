@@ -2,56 +2,74 @@
 
 This directory contains practical examples demonstrating various use cases for the Claude Code SDK TypeScript implementation.
 
+## 📁 Directory Structure
+
+- **`fluent-api/`** - Modern examples using the fluent API with method chaining
+- **`previous-syntax/`** - Examples using the traditional function-based API
+
+## 🎯 Choose Your API Style
+
+### Fluent API (Recommended)
+The fluent API provides a more intuitive, chainable interface:
+```javascript
+const result = await claude()
+  .withModel('opus')
+  .allowTools('Read', 'Write')
+  .acceptEdits()
+  .query('Create a README file')
+  .asText();
+```
+
+### Previous Syntax
+The traditional function-based approach:
+```javascript
+for await (const message of query('Create a README file', {
+  model: 'opus',
+  allowedTools: ['Read', 'Write'],
+  permissionMode: 'acceptEdits'
+})) {
+  // Handle messages
+}
+```
+
 ## 📚 Examples Overview
 
-### 1. [hello-world.js](./hello-world.js)
-The simplest possible example - asking Claude to say "Hello World!"
+### Core Examples (Available in Both API Styles)
 
-```bash
-node examples/hello-world.js
-```
+1. **Hello World** - The simplest example
+   - Fluent: `node fluent-api/hello-world.js`
+   - Previous: `node previous-syntax/hello-world.js`
 
-### 2. [file-operations.js](./file-operations.js)
-Demonstrates file creation, reading, and editing operations.
+2. **File Operations** - File creation, reading, and editing
+   - Fluent: `node fluent-api/file-operations.js`
+   - Previous: `node previous-syntax/file-operations.js`
 
-```bash
-node examples/file-operations.js
-```
+3. **Code Analysis** - Analyze code patterns and quality
+   - Fluent: `node fluent-api/code-analysis.js`
+   - Previous: `node previous-syntax/code-analysis.js`
 
-### 3. [code-analysis.js](./code-analysis.js)
-Shows how to analyze code, find patterns, and identify areas for improvement.
+4. **Interactive Session** - Interactive CLI with Claude
+   - Fluent: `node fluent-api/interactive-session.js`
+   - Previous: `node previous-syntax/interactive-session.js`
 
-```bash
-node examples/code-analysis.js
-```
+5. **Web Research** - Research and learning tasks
+   - Fluent: `node fluent-api/web-research.js`
+   - Previous: `node previous-syntax/web-research.js`
 
-### 4. [interactive-session.js](./interactive-session.js)
-Creates an interactive CLI session where you can chat with Claude and execute various commands.
+6. **Project Scaffolding** - Create project structures
+   - Fluent: `node fluent-api/project-scaffolding.js react-app my-project`
+   - Previous: `node previous-syntax/project-scaffolding.js`
 
-```bash
-node examples/interactive-session.js
-```
+7. **Error Handling** - Comprehensive error patterns
+   - Fluent: `node fluent-api/error-handling.js`
+   - Previous: `node previous-syntax/error-handling.js`
 
-### 5. [web-research.js](./web-research.js)
-Demonstrates using Claude's web search and fetch capabilities for research tasks.
+### Fluent API Exclusive Examples
 
-```bash
-node examples/web-research.js
-```
-
-### 6. [project-scaffolding.js](./project-scaffolding.js)
-Shows how to use Claude to create complete project structures with best practices.
-
-```bash
-node examples/project-scaffolding.js
-```
-
-### 7. [error-handling.js](./error-handling.js)
-Comprehensive error handling examples and patterns for robust applications.
-
-```bash
-node examples/error-handling.js
-```
+8. **[fluent-api-demo.js](./fluent-api-demo.js)** - Comprehensive fluent API showcase
+9. **[response-parsing-demo.js](./response-parsing-demo.js)** - Advanced response handling
+10. **[new-features-demo.js](./new-features-demo.js)** - MCP permissions, roles, and config files
+11. **[enhanced-features-demo.js](./enhanced-features-demo.js)** - New enhanced features (v0.3.0)
 
 ## 🚀 Getting Started
 
@@ -145,6 +163,71 @@ See [interactive-session.js](./interactive-session.js) for:
 - Building interactive CLIs
 - Dynamic option configuration
 - User input handling
+
+## 🆕 Enhanced Features (v0.3.0)
+
+The SDK now includes several enhanced features based on early adopter feedback:
+
+### 1. **Typed Error Handling**
+```javascript
+import { isRateLimitError, isToolPermissionError } from '@instantlyeasy/claude-code-sdk-ts';
+
+try {
+  // Your Claude query
+} catch (error) {
+  if (isRateLimitError(error)) {
+    console.log(`Retry after ${error.retryAfter} seconds`);
+  } else if (isToolPermissionError(error)) {
+    console.log(`Tool ${error.tool} denied: ${error.reason}`);
+  }
+}
+```
+
+### 2. **Token-Level Streaming**
+```javascript
+import { createTokenStream } from '@instantlyeasy/claude-code-sdk-ts';
+
+const tokenStream = createTokenStream(messageGenerator);
+for await (const chunk of tokenStream.tokens()) {
+  process.stdout.write(chunk.token);
+}
+```
+
+### 3. **Per-Call Tool Permissions**
+```javascript
+const permissionManager = createPermissionManager(options);
+const isAllowed = await permissionManager.isToolAllowed('Bash', context, {
+  allow: ['Read', 'Write'],
+  deny: ['Bash'],
+  dynamicPermissions: {
+    Write: async (ctx) => ctx.role === 'admin' ? 'allow' : 'deny'
+  }
+});
+```
+
+### 4. **OpenTelemetry Integration**
+```javascript
+const telemetryProvider = createTelemetryProvider();
+const logger = telemetryProvider.getLogger('my-app');
+const span = logger.startSpan('claude-query');
+// ... your query
+span.end();
+```
+
+### 5. **Exponential Backoff & Retry**
+```javascript
+const retryExecutor = createRetryExecutor({
+  maxAttempts: 3,
+  initialDelay: 1000,
+  multiplier: 2
+});
+
+const result = await retryExecutor.execute(async () => {
+  return await query('Your prompt');
+});
+```
+
+See [enhanced-features-demo.js](./enhanced-features-demo.js) for a complete demonstration.
 
 ## 📖 Additional Resources
 

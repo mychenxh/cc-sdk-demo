@@ -56,7 +56,7 @@ export interface AssistantMessage {
 export interface SystemMessage {
   type: 'system';
   subtype?: string;
-  data?: any;
+  data?: unknown;
 }
 
 export interface ResultMessage {
@@ -87,6 +87,9 @@ export interface MCPServer {
   env?: Record<string, string>;
 }
 
+// Import types needed for options
+import type { MCPServerPermissionConfig } from './types/permissions.js';
+
 // Main options interface
 export interface ClaudeCodeOptions {
   model?: string;
@@ -104,6 +107,14 @@ export interface ClaudeCodeOptions {
   env?: Record<string, string>;
   timeout?: number;
   debug?: boolean;
+  // New permission management options
+  mcpServerPermissions?: MCPServerPermissionConfig;
+  // Configuration file path
+  configFile?: string;
+  // Role to apply
+  role?: string;
+  // System prompt override
+  systemPrompt?: string;
 }
 
 // Additional types for internal use
@@ -126,3 +137,37 @@ export interface CLIEnd {
 }
 
 export type CLIOutput = CLIMessage | CLIError | CLIEnd;
+
+// Re-export new permission and configuration types
+export * from './types/permissions.js';
+export * from './types/config.js';
+export * from './types/roles.js';
+
+// Re-export enhanced error types
+export * from './types/enhanced-errors.js';
+
+// Re-export streaming types
+export * from './types/streaming.js';
+
+// Re-export per-call permission types (excluding ToolPermission which is already exported)
+export {
+  ToolOverrides,
+  PermissionContext,
+  QueryContext,
+  DynamicPermissionFunction,
+  PermissionResolution,
+  PermissionSource,
+  PermissionSourceDetails,
+  ResolvedPermissions,
+  PermissionResolverConfig,
+  ConflictResolution,
+  AdvancedPermissionOptions,
+  PermissionDecision,
+  ToolPermissionManager
+} from './types/per-call-permissions.js';
+
+// Re-export telemetry types
+export * from './types/telemetry.js';
+
+// Re-export retry types
+export * from './types/retry.js';

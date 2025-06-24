@@ -99,7 +99,7 @@ export class ResponseParser {
   /**
    * Find all tool results for a specific tool
    */
-  async findToolResults(toolName: string): Promise<any[]> {
+  async findToolResults(toolName: string): Promise<unknown[]> {
     const executions = await this.asToolExecutions();
     return executions
       .filter(exec => exec.tool === toolName && !exec.isError)
@@ -109,7 +109,7 @@ export class ResponseParser {
   /**
    * Get first tool result for a specific tool
    */
-  async findToolResult(toolName: string): Promise<any | null> {
+  async findToolResult(toolName: string): Promise<unknown | null> {
     const results = await this.findToolResults(toolName);
     return results[0] ?? null;
   }
@@ -117,7 +117,7 @@ export class ResponseParser {
   /**
    * Extract structured data from the response
    */
-  async asJSON<T = any>(): Promise<T | null> {
+  async asJSON<T = unknown>(): Promise<T | null> {
     const text = await this.asText();
     
     // Try to find JSON in code blocks first
@@ -218,7 +218,10 @@ export class ResponseParser {
     // Check system messages for errors
     for (const msg of this.messages) {
       if (msg.type === 'system' && msg.subtype === 'error') {
-        errors.push(msg.data?.message || 'Unknown error');
+        const errorMessage = msg.data && typeof msg.data === 'object' && 'message' in msg.data
+          ? String(msg.data.message)
+          : 'Unknown error';
+        errors.push(errorMessage);
       }
     }
     
@@ -275,7 +278,7 @@ export class ResponseParser {
 export interface ToolExecution {
   tool: string;
   input: Record<string, unknown>;
-  result: any;
+  result: unknown;
   isError: boolean;
 }
 
