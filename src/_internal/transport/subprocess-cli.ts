@@ -192,8 +192,16 @@ export class SubprocessCLITransport {
         stdin: 'pipe',
         stdout: 'pipe',
         stderr: 'pipe',
-        buffer: false
+        buffer: false,
+        signal: this.options.signal
       });
+
+      // Handle abort signal
+      if (this.options.signal) {
+        this.options.signal.addEventListener('abort', () => {
+          this.disconnect();
+        }, { once: true });
+      }
       
       // Send prompt via stdin
       if (this.process.stdin) {

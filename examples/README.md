@@ -70,6 +70,7 @@ for await (const message of query('Create a README file', {
 9. **[response-parsing-demo.js](./response-parsing-demo.js)** - Advanced response handling
 10. **[new-features-demo.js](./new-features-demo.js)** - MCP permissions, roles, and config files
 11. **[enhanced-features-demo.js](./enhanced-features-demo.js)** - New enhanced features (v0.3.0)
+12. **[production-features.js](./production-features.js)** - Production-ready features (AbortSignal, read-only mode, logging)
 
 ## 🚀 Getting Started
 
@@ -228,6 +229,14 @@ const result = await retryExecutor.execute(async () => {
 ```
 
 See [enhanced-features-demo.js](./enhanced-features-demo.js) for a complete demonstration.
+
+### 6. **Production Features**
+
+See [production-features.js](./production-features.js) for:
+- Cancellable queries with AbortSignal
+- Read-only mode enforcement with `allowTools()`
+- Advanced logging with nested object support
+- Message vs token streaming clarification
 
 ## 📖 Additional Resources
 

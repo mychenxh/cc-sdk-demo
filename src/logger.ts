@@ -71,7 +71,8 @@ export class ConsoleLogger implements Logger {
     const args: unknown[] = [`${prefix}: ${entry.message}`];
     
     if (entry.context && Object.keys(entry.context).length > 0) {
-      args.push(entry.context);
+      // Serialize nested objects properly
+      args.push(JSON.stringify(entry.context, null, 2));
     }
     
     if (entry.error) {
@@ -158,7 +159,7 @@ export class JSONLogger implements Logger {
       level: LogLevel[entry.level],
       message: entry.message,
       timestamp: entry.timestamp.toISOString(),
-      ...entry.context,
+      context: entry.context,
       ...(entry.error && {
         error: {
           message: entry.error.message,

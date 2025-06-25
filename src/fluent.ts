@@ -57,9 +57,21 @@ export class QueryBuilder {
 
   /**
    * Set allowed tools
+   * Use allowTools() with no arguments to enforce read-only mode (denies all tools)
    */
   allowTools(...tools: ToolName[]): this {
-    this.options.allowedTools = tools;
+    if (tools.length === 0) {
+      // Enforce read-only mode by denying all tools
+      const allTools: ToolName[] = [
+        'Read', 'Write', 'Edit', 'Bash', 'Grep', 'Glob', 'LS',
+        'MultiEdit', 'NotebookRead', 'NotebookEdit', 'WebFetch',
+        'TodoRead', 'TodoWrite', 'WebSearch', 'Task', 'MCPTool'
+      ];
+      this.options.deniedTools = allTools;
+      this.options.allowedTools = [];
+    } else {
+      this.options.allowedTools = tools;
+    }
     return this;
   }
 
@@ -116,6 +128,14 @@ export class QueryBuilder {
    */
   withTimeout(ms: number): this {
     this.options.timeout = ms;
+    return this;
+  }
+
+  /**
+   * Set AbortSignal for cancellation
+   */
+  withSignal(signal: AbortSignal): this {
+    this.options.signal = signal;
     return this;
   }
 

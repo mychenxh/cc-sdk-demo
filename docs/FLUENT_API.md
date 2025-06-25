@@ -44,6 +44,7 @@ claude()
 claude()
   .allowTools('Read', 'Write', 'Edit')    // Explicitly allow tools
   .denyTools('Bash', 'WebSearch')         // Explicitly deny tools
+  .allowTools()                            // No arguments = read-only mode (denies all tools)
 ```
 
 ### Permissions
@@ -125,12 +126,38 @@ console.log(`Cost: $${usage.totalCost}`);
 
 ### Streaming
 
+**Important Note**: This SDK streams **complete messages**, not individual tokens. Each assistant message contains the full text block, not incremental updates.
+
 ```typescript
 await parser.stream(async (message) => {
   if (message.type === 'assistant') {
-    // Handle streaming content
+    // Each message contains complete text, not token-by-token updates
+    console.log(message.content[0].text); // Full text block
   }
 });
+```
+
+### Cancellation with AbortSignal
+
+```typescript
+const controller = new AbortController();
+
+const parser = claude()
+  .withSignal(controller.signal)
+  .query('Long running query');
+
+// Cancel after 5 seconds
+setTimeout(() => controller.abort(), 5000);
+
+try {
+  await parser.stream(async (message) => {
+    // Process messages
+  });
+} catch (error) {
+  if (controller.signal.aborted) {
+    console.log('Query was cancelled');
+  }
+}
 ```
 
 ### Error Handling

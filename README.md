@@ -92,6 +92,47 @@ for (const execution of analysis) {
 }
 ```
 
+### Production Features
+
+#### Cancellation with AbortSignal
+
+```javascript
+const controller = new AbortController();
+
+// Cancel after 5 seconds
+setTimeout(() => controller.abort(), 5000);
+
+const response = await claude()
+  .withSignal(controller.signal)
+  .query('Long running task')
+  .asText();
+```
+
+#### Read-Only Mode
+
+```javascript
+// Enforce read-only mode by denying all tools
+const safeResponse = await claude()
+  .allowTools() // Empty = deny all tools
+  .query('Analyze this code')
+  .asText();
+```
+
+#### Message Streaming
+
+**Note**: The SDK streams complete messages, not individual tokens.
+
+```javascript
+await claude()
+  .query('Tell me a story')
+  .stream(async (message) => {
+    if (message.type === 'assistant') {
+      // Each message contains complete text, not token-by-token
+      console.log(message.content[0].text);
+    }
+  });
+```
+
 ### Classic API (Original Syntax)
 
 The original async generator API is still fully supported:

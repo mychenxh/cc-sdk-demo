@@ -114,6 +114,8 @@ export interface ClaudeCodeOptions {
   role?: string;
   // System prompt override
   systemPrompt?: string;
+  // AbortSignal for cancellation
+  signal?: AbortSignal;
 }
 
 // Additional types for internal use
