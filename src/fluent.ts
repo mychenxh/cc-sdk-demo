@@ -140,6 +140,14 @@ export class QueryBuilder {
   }
 
   /**
+   * Set session ID for continuing an existing conversation
+   */
+  withSessionId(sessionId: string): this {
+    this.options.sessionId = sessionId;
+    return this;
+  }
+
+  /**
    * Enable debug mode
    */
   debug(enabled = true): this {

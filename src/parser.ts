@@ -168,6 +168,27 @@ export class ResponseParser {
   }
 
   /**
+   * Get the session ID if available
+   */
+  async getSessionId(): Promise<string | null> {
+    await this.consume();
+
+    // Look for session_id on any message (CLI sets this on all messages)
+    for (const msg of this.messages) {
+      if (msg.session_id) {
+        return msg.session_id;
+      }
+
+      // Also check system messages with session data
+      if (msg.type === 'system' && msg.data?.session_id) {
+        return msg.data.session_id;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Stream messages with a callback (doesn't consume for other methods)
    */
   async stream(callback: (message: Message) => void | Promise<void>): Promise<void> {

@@ -6,6 +6,7 @@ The Claude Code SDK now includes a powerful fluent API that makes it easier to b
 - [Getting Started](#getting-started)
 - [Query Builder](#query-builder)
 - [Response Parser](#response-parser)
+- [Session Management](#session-management)
 - [Logging Framework](#logging-framework)
 - [Advanced Patterns](#advanced-patterns)
 - [Migration Guide](#migration-guide)
@@ -175,6 +176,73 @@ const customData = await parser.transform(messages => {
   return processMessages(messages);
 });
 ```
+
+## Session Management
+
+The SDK provides built-in support for maintaining conversation context across multiple queries using session IDs:
+
+### Basic Session Usage
+
+```typescript
+// First query - start a new session
+const parser = claude()
+  .withModel('sonnet')
+  .query('Remember this number: 42');
+
+// Get the session ID for later use
+const sessionId = await parser.getSessionId();
+const firstResponse = await parser.asText();
+
+// Continue the conversation in the same session
+const followUp = await claude()
+  .withModel('sonnet')
+  .withSessionId(sessionId)
+  .query('What number did I ask you to remember?')
+  .asText();
+
+console.log(followUp); // Claude will remember "42"
+```
+
+### Session Pattern for Complex Workflows
+
+```typescript
+async function interactiveSession() {
+  const builder = claude()
+    .withModel('opus')
+    .skipPermissions();
+  
+  // Initial context setup
+  const parser = builder.query('You are helping me refactor a codebase. Start by analyzing the current structure.');
+  const sessionId = await parser.getSessionId();
+  await parser.asText();
+  
+  // Continue with multiple related tasks
+  const analysis = await builder
+    .withSessionId(sessionId)
+    .query('What are the main issues you found?')
+    .asText();
+  
+  const plan = await builder
+    .withSessionId(sessionId)
+    .query('Create a refactoring plan to address these issues')
+    .asText();
+  
+  const implementation = await builder
+    .withSessionId(sessionId)
+    .allowTools('Read', 'Write', 'Edit')
+    .query('Implement the first step of the refactoring plan')
+    .asResult();
+  
+  return { sessionId, analysis, plan, implementation };
+}
+```
+
+### Session Best Practices
+
+1. **Store session IDs**: Save session IDs if you need to resume conversations later
+2. **Context preservation**: Sessions maintain full conversation history
+3. **Tool state**: File changes and tool usage are preserved within a session
+4. **Session expiration**: Sessions may expire after a period of inactivity
 
 ## Logging Framework
 

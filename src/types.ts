@@ -46,23 +46,27 @@ export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock;
 export interface UserMessage {
   type: 'user';
   content: string;
+  session_id?: string;
 }
 
 export interface AssistantMessage {
   type: 'assistant';
   content: ContentBlock[];
+  session_id?: string;
 }
 
 export interface SystemMessage {
   type: 'system';
   subtype?: string;
   data?: unknown;
+  session_id?: string;
 }
 
 export interface ResultMessage {
   type: 'result';
   subtype?: string;
   content: string;
+  session_id?: string;
   usage?: {
     input_tokens?: number;
     output_tokens?: number;
@@ -116,6 +120,8 @@ export interface ClaudeCodeOptions {
   systemPrompt?: string;
   // AbortSignal for cancellation
   signal?: AbortSignal;
+  // Session ID for conversation continuity
+  sessionId?: string;
 }
 
 // Additional types for internal use

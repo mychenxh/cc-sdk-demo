@@ -69,6 +69,31 @@ const config = await claude()
 console.log('Version:', config.version);
 ```
 
+### Session Management
+
+Maintain conversation context across multiple queries with built-in session handling:
+
+```javascript
+import { claude } from '@instantlyeasy/claude-code-sdk-ts';
+
+// Session management with explicit session ID
+const builder = claude().withModel('sonnet').skipPermissions();
+const parser = builder.query('Pick a random number from 1-100');
+const sessionId = await parser.getSessionId();
+const firstResponse = await parser.asText();
+const secondResponse = await builder.withSessionId(sessionId).query('What number did you pick?').asText();
+// Claude remembers the number from the first query
+
+// Manual session management
+const builder = claude().withModel('sonnet').skipPermissions();
+const parser = builder.query('Tell me a fun fact');
+const sessionId = await parser.getSessionId();
+const fact = await parser.asText();
+
+// Continue conversation with session ID
+const follow = await builder.withSessionId(sessionId).query('Tell me more about that topic').asText();
+```
+
 ### Advanced Features
 
 ```javascript
@@ -184,6 +209,7 @@ const builder = claude()
   .inDirectory('/path')       // Set working directory
   .withLogger(logger)         // Add logging
   .onMessage(handler)         // Add event handlers
+  .withSessionId('session-id') // Continue existing session
   .query('Your prompt');      // Execute query
 ```
 
@@ -227,6 +253,9 @@ interface ClaudeCodeOptions {
   
   // Permission handling
   permissionMode?: PermissionMode; // 'default' | 'acceptEdits' | 'bypassPermissions'
+  
+  // Session management
+  sessionId?: string; // Existing session ID to continue conversation
   
   // Execution environment
   cwd?: string;               // Working directory
@@ -380,6 +409,7 @@ Check out the [examples directory](./examples) for complete, runnable examples i
 - **[yaml-config-demo.js](./examples/yaml-config-demo.js)** - YAML configuration examples
 - **[new-features-demo.js](./examples/new-features-demo.js)** - MCP permissions, roles, and config files
 - **[Enhanced Features Examples](./examples/fluent-api/new-features/)** - Token streaming, error handling, and retry strategies
+- **[sessions.js](./examples/sessions.js)** - Session management and conversation context
 - Hello World (both classic and fluent syntax)
 - File operations
 - Code analysis

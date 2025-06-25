@@ -71,6 +71,7 @@ for await (const message of query('Create a README file', {
 10. **[new-features-demo.js](./new-features-demo.js)** - MCP permissions, roles, and config files
 11. **[enhanced-features-demo.js](./enhanced-features-demo.js)** - New enhanced features (v0.3.0)
 12. **[production-features.js](./production-features.js)** - Production-ready features (AbortSignal, read-only mode, logging)
+13. **[sessions.js](./sessions.js)** - Session management and conversation context
 
 ## 🚀 Getting Started
 
@@ -237,6 +238,12 @@ See [production-features.js](./production-features.js) for:
 - Read-only mode enforcement with `allowTools()`
 - Advanced logging with nested object support
 - Message vs token streaming clarification
+
+### 7. **Session Management**
+
+See [sessions.js](./sessions.js) for:
+- Session management with `getSessionId()` and `withSessionId()`
+- Maintaining conversation context across multiple queries
 
 ## 📖 Additional Resources
 
