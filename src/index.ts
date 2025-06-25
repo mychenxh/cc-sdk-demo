@@ -47,6 +47,7 @@ export async function* query(
 // Re-export all types
 export * from './types.js';
 export * from './errors.js';
+export { AbortError } from './errors.js';
 
 // Export new fluent API (backward compatible - original query function still available)
 export { claude, QueryBuilder } from './fluent.js';

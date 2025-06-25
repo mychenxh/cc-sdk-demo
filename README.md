@@ -122,16 +122,28 @@ for (const execution of analysis) {
 #### Cancellation with AbortSignal
 
 ```javascript
+import { claude, AbortError } from '@instantlyeasy/claude-code-sdk-ts';
+
 const controller = new AbortController();
 
 // Cancel after 5 seconds
 setTimeout(() => controller.abort(), 5000);
 
-const response = await claude()
-  .withSignal(controller.signal)
-  .query('Long running task')
-  .asText();
+try {
+  const response = await claude()
+    .withSignal(controller.signal)
+    .query('Long running task')
+    .asText();
+} catch (error) {
+  if (error instanceof AbortError) {
+    console.log('Query was cancelled');
+  } else {
+    throw error;
+  }
+}
 ```
+
+**Note**: Node.js may show "AbortError" warnings when aborting child processes. These are expected and can be safely ignored.
 
 #### Read-Only Mode
 

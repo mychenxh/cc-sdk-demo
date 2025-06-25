@@ -227,6 +227,57 @@ describe('QueryBuilder', () => {
     });
   });
 
+  describe('Add Directories', () => {
+    it('should add a single directory as string', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      claude().addDirectory('/path/to/dir').query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          addDirectories: ['/path/to/dir']
+        })
+      );
+    });
+
+    it('should add multiple directories as array', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      claude().addDirectory(['/path/to/dir1', '/path/to/dir2']).query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          addDirectories: ['/path/to/dir1', '/path/to/dir2']
+        })
+      );
+    });
+
+    it('should accumulate directories from multiple calls', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      claude()
+        .addDirectory('/first/dir')
+        .addDirectory(['/second/dir', '/third/dir'])
+        .addDirectory('/fourth/dir')
+        .query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          addDirectories: ['/first/dir', '/second/dir', '/third/dir', '/fourth/dir']
+        })
+      );
+    });
+  });
+
   describe('Event Handlers', () => {
     it('should call message handlers', async () => {
       const handler = vi.fn();

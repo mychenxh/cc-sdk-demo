@@ -46,3 +46,4 @@ publish.sh
 # Git files
 .git/
 .gitignore
+.dev

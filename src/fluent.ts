@@ -164,6 +164,18 @@ export class QueryBuilder {
   }
 
   /**
+   * Add directory(-ies) to include in the context
+   */
+  addDirectory(directories: string | string[]): this {
+    if (!this.options.addDirectories) {
+      this.options.addDirectories = [];
+    }
+    const dirsToAdd = Array.isArray(directories) ? directories : [directories];
+    this.options.addDirectories.push(...dirsToAdd);
+    return this;
+  }
+
+  /**
    * Set logger
    */
   withLogger(logger: Logger): this {

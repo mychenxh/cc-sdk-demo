@@ -1,6 +1,6 @@
 // Base error class for all Claude SDK errors
 export class ClaudeSDKError extends Error {
-  constructor(message: string) {
+  constructor(message: string, public readonly code?: string) {
     super(message);
     this.name = 'ClaudeSDKError';
     Object.setPrototypeOf(this, ClaudeSDKError.prototype);
@@ -35,6 +35,15 @@ export class ProcessError extends ClaudeSDKError {
     super(message);
     this.name = 'ProcessError';
     Object.setPrototypeOf(this, ProcessError.prototype);
+  }
+}
+
+// Error when operation is aborted via AbortSignal
+export class AbortError extends ClaudeSDKError {
+  constructor(message: string = 'Operation was aborted') {
+    super(message, 'ABORT_ERROR');
+    this.name = 'AbortError';
+    Object.setPrototypeOf(this, AbortError.prototype);
   }
 }
 

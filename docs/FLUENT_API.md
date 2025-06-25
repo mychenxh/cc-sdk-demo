@@ -65,6 +65,22 @@ claude()
   .withEnv({ NODE_ENV: 'production' })
 ```
 
+### Directory Context
+
+```typescript
+claude()
+  .addDirectory('/path/to/dir')          // Add single directory
+  .addDirectory(['../apps', '../lib'])   // Add multiple directories
+  .addDirectory('/another/dir')          // Accumulate with multiple calls
+```
+
+The `addDirectory` method allows you to add additional working directories for Claude to access:
+
+- **Single directory**: Pass a string path
+- **Multiple directories**: Pass an array of string paths
+- **Accumulative**: Multiple calls to `addDirectory` will accumulate all directories
+- **CLI mapping**: Generates `--add-dir` flag with space-separated paths
+
 ### MCP Servers
 
 ```typescript
@@ -141,6 +157,8 @@ await parser.stream(async (message) => {
 ### Cancellation with AbortSignal
 
 ```typescript
+import { claude, AbortError } from '@instantlyeasy/claude-code-sdk-ts';
+
 const controller = new AbortController();
 
 const parser = claude()
@@ -155,11 +173,15 @@ try {
     // Process messages
   });
 } catch (error) {
-  if (controller.signal.aborted) {
+  if (error instanceof AbortError) {
     console.log('Query was cancelled');
+  } else {
+    throw error;
   }
 }
 ```
+
+**Note**: Due to how Node.js handles child process aborts, you may see "AbortError" warnings in the console. These can be safely ignored. The SDK properly throws `AbortError` instances that you can catch.
 
 ### Error Handling
 

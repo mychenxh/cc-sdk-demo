@@ -5,13 +5,16 @@ import { platform } from 'node:os';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { access, constants } from 'node:fs/promises';
-import { CLIConnectionError, CLINotFoundError, ProcessError, CLIJSONDecodeError } from '../../errors.js';
+import { CLIConnectionError, CLINotFoundError, ProcessError, CLIJSONDecodeError, AbortError } from '../../errors.js';
 import type { ClaudeCodeOptions, CLIOutput } from '../../types.js';
+import { SubprocessAbortHandler } from './subprocess-abort-handler.js';
 
 export class SubprocessCLITransport {
   private process?: ExecaChildProcess;
   private options: ClaudeCodeOptions;
   private prompt: string;
+  private abortHandler?: SubprocessAbortHandler;
+  private cleanupAbort?: () => void;
 
   constructor(prompt: string, options: ClaudeCodeOptions = {}) {
     this.prompt = prompt;
@@ -168,6 +171,11 @@ export class SubprocessCLITransport {
       args.push('--max-tokens', this.options.maxTokens.toString());
     }
 
+    // Handle add directories
+    if (this.options.addDirectories && this.options.addDirectories.length > 0) {
+      args.push('--add-dir', this.options.addDirectories.join(' '));
+    }
+
     // Add --print flag (prompt will be sent via stdin)
     args.push('--print');
 
@@ -191,22 +199,20 @@ export class SubprocessCLITransport {
     }
 
     try {
+      // Don't pass signal to execa - we'll handle it manually
       this.process = execa(cliPath, args, {
         env,
         cwd: this.options.cwd,
         stdin: 'pipe',
         stdout: 'pipe',
         stderr: 'pipe',
-        buffer: false,
-        signal: this.options.signal
+        buffer: false
+        // Remove signal from here - we'll handle it manually
       });
 
-      // Handle abort signal
-      if (this.options.signal) {
-        this.options.signal.addEventListener('abort', () => {
-          this.disconnect();
-        }, { once: true });
-      }
+      // Set up abort handling with proper cleanup
+      this.abortHandler = new SubprocessAbortHandler(this.process, this.options.signal);
+      this.cleanupAbort = this.abortHandler.setup();
       
       // Send prompt via stdin
       if (this.process.stdin) {
@@ -223,70 +229,94 @@ export class SubprocessCLITransport {
       throw new CLIConnectionError('Not connected to CLI');
     }
 
-    // Handle stderr in background
-    if (this.process.stderr) {
-      const stderrRl = createInterface({
-        input: this.process.stderr,
+    try {
+      // Handle stderr in background
+      if (this.process.stderr) {
+        const stderrRl = createInterface({
+          input: this.process.stderr,
+          crlfDelay: Infinity
+        });
+        
+        stderrRl.on('line', (line) => {
+          if (this.options.debug) {
+            // eslint-disable-next-line no-console
+            console.error('DEBUG stderr:', line);
+          }
+        });
+      }
+
+      const rl = createInterface({
+        input: this.process.stdout,
         crlfDelay: Infinity
       });
-      
-      stderrRl.on('line', (line) => {
+
+      // Process stream-json format - each line is a JSON object
+      for await (const line of rl) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+        
         if (this.options.debug) {
           // eslint-disable-next-line no-console
-          console.error('DEBUG stderr:', line);
+          console.error('DEBUG stdout:', trimmedLine);
         }
-      });
-    }
-
-    const rl = createInterface({
-      input: this.process.stdout,
-      crlfDelay: Infinity
-    });
-
-    // Process stream-json format - each line is a JSON object
-    for await (const line of rl) {
-      const trimmedLine = line.trim();
-      if (!trimmedLine) continue;
-      
-      if (this.options.debug) {
-        // eslint-disable-next-line no-console
-        console.error('DEBUG stdout:', trimmedLine);
+        
+        try {
+          const parsed = JSON.parse(trimmedLine) as CLIOutput;
+          yield parsed;
+        } catch (error) {
+          // Skip non-JSON lines (like Python SDK does)
+          if (trimmedLine.startsWith('{') || trimmedLine.startsWith('[')) {
+            throw new CLIJSONDecodeError(
+              `Failed to parse CLI output: ${error}`,
+              trimmedLine
+            );
+          }
+          continue;
+        }
       }
-      
+
+      // Wait for process to exit
       try {
-        const parsed = JSON.parse(trimmedLine) as CLIOutput;
-        yield parsed;
-      } catch (error) {
-        // Skip non-JSON lines (like Python SDK does)
-        if (trimmedLine.startsWith('{') || trimmedLine.startsWith('[')) {
-          throw new CLIJSONDecodeError(
-            `Failed to parse CLI output: ${error}`,
-            trimmedLine
+        await this.process;
+      } catch (error: any) {
+        // Check if the process was cancelled/aborted
+        if (error.isCanceled || error.name === 'CancelError' || this.abortHandler?.wasAborted()) {
+          // Throw a proper AbortError so it can be caught by the user
+          throw new AbortError('Query was aborted via AbortSignal');
+        }
+        
+        const execError = error as { exitCode?: number; signal?: NodeJS.Signals };
+        if (execError.exitCode !== 0) {
+          throw new ProcessError(
+            `Claude Code CLI exited with code ${execError.exitCode}`,
+            execError.exitCode,
+            execError.signal
           );
         }
-        continue;
       }
-    }
-
-    // Wait for process to exit
-    try {
-      await this.process;
-    } catch (error) {
-      const execError = error as { exitCode?: number; signal?: NodeJS.Signals };
-      if (execError.exitCode !== 0) {
-        throw new ProcessError(
-          `Claude Code CLI exited with code ${execError.exitCode}`,
-          execError.exitCode,
-          execError.signal
-        );
+    } finally {
+      // Clean up abort handler
+      if (this.cleanupAbort) {
+        this.cleanupAbort();
       }
     }
   }
 
   async disconnect(): Promise<void> {
+    // Clean up abort handler first
+    if (this.cleanupAbort) {
+      this.cleanupAbort();
+      this.cleanupAbort = undefined;
+    }
+    
     if (this.process) {
-      this.process.cancel();
+      // Kill the process if it's still running
+      if (!this.process.killed) {
+        this.process.kill();
+      }
       this.process = undefined;
     }
+    
+    this.abortHandler = undefined;
   }
 }

@@ -122,6 +122,8 @@ export interface ClaudeCodeOptions {
   signal?: AbortSignal;
   // Session ID for conversation continuity
   sessionId?: string;
+  // Additional directories to include in context
+  addDirectories?: string[];
 }
 
 // Additional types for internal use
