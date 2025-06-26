@@ -49,6 +49,13 @@ export * from './types.js';
 export * from './errors.js';
 export { AbortError } from './errors.js';
 
+// Export enhanced error utilities
+export { 
+  isEnhancedError, 
+  hasResolution 
+} from '../.dev/tdd/from-cli-insights/interfaces.js';
+export { API_KEY_SAFETY_WARNING } from './environment.js';
+
 // Export new fluent API (backward compatible - original query function still available)
 export { claude, QueryBuilder } from './fluent.js';
 export { ResponseParser, type ToolExecution, type UsageStats } from './parser.js';

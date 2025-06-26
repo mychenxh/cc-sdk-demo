@@ -1,6 +1,8 @@
 import { SubprocessCLITransport } from './transport/subprocess-cli.js';
 import type { ClaudeCodeOptions, Message } from '../types.js';
 import { detectErrorType, createTypedError } from '../errors.js';
+import { loadSafeEnvironmentOptions } from '../environment.js';
+import { applyEnvironmentOptions } from './options-merger.js';
 
 export class InternalClient {
   private options: ClaudeCodeOptions;
@@ -8,7 +10,10 @@ export class InternalClient {
 
   constructor(prompt: string, options: ClaudeCodeOptions = {}) {
     this.prompt = prompt;
-    this.options = options;
+    
+    // Load safe environment variables and merge with user options
+    const envOptions = loadSafeEnvironmentOptions();
+    this.options = applyEnvironmentOptions(options, envOptions);
   }
 
   async *processQuery(): AsyncGenerator<Message> {

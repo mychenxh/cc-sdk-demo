@@ -8,7 +8,6 @@ tests/
 tsconfig.json
 tsup.config.ts
 vitest.config.ts
-CLAUDE.md
 .claude
 
 
@@ -47,3 +46,16 @@ publish.sh
 .git/
 .gitignore
 .dev
+
+# Dev symlinks
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+.eslintrc.json
+
+# Other dev files
+CONTRIBUTING.md
+SECURITY.md
+CLAUDE.md
+LLM.yml
+*.tgz

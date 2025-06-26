@@ -1,6 +1,6 @@
 {
   "name": "@instantlyeasy/claude-code-sdk-ts",
-  "version": "0.3.0-beta.2",
+  "version": "0.3.0",
   "description": "Unofficial TypeScript port of the official Python Claude Code SDK",
   "type": "module",
   "main": "dist/index.js",
@@ -25,8 +25,8 @@
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests --ext .ts",
-    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "lint": "eslint src .dev/tests --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\" \".dev/tests/**/*.ts\"",
     "prepare": "npm run build"
   },
   "keywords": [

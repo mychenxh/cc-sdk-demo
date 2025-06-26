@@ -5,13 +5,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js Version](https://img.shields.io/node/v/@instantlyeasy/claude-code-sdk-ts.svg)](https://nodejs.org/)
-[![LLM.yml](https://img.shields.io/badge/LLM.yml-v1.0.0-blue)](./LLM.yml)
 
-Unofficial TypeScript port of the official Python Claude Code SDK for [Claude Code](https://github.com/anthropics/claude-code), the CLI tool for interacting with Claude.
+Unofficial TypeScript SDK for [Claude Code](https://github.com/anthropics/claude-code) - the powerful CLI tool for interacting with Claude.
 
-> **Note**: This is a community-maintained TypeScript port. For the official Python SDK, see [claude-code-sdk](https://github.com/anthropics/claude-code-sdk).
-
-📚 **AI Assistant Documentation**: See [LLM.yml](./LLM.yml) for AI-optimized documentation that helps Claude and other AI assistants understand this SDK quickly.
+> **Note**: For the classic async generator API, see [Classic API Documentation](docs/CLASSIC_API.md).
 
 ## Installation
 
@@ -29,101 +26,127 @@ pnpm add @instantlyeasy/claude-code-sdk-ts
 
 ## Quick Start
 
-### New Fluent API (Recommended)
-
-The SDK now includes a powerful fluent API that makes common tasks easier:
-
 ```javascript
 import { claude } from '@instantlyeasy/claude-code-sdk-ts';
 
-// Simple Hello World
+// Simple query
 const response = await claude()
-  .withModel('sonnet')
-  .skipPermissions()
   .query('Say "Hello World!"')
   .asText();
 
-console.log(response); // Outputs: Hello World!
+console.log(response); // "Hello World!"
 ```
 
-### File Operations with Fluent API
+## Authentication
+
+This SDK delegates all authentication to the Claude CLI:
+
+```bash
+# One-time setup - login with your Claude account
+claude login
+```
+
+The SDK does not handle authentication directly. If you see authentication errors, authenticate using the Claude CLI first.
+
+## Core Features
+
+### 🎯 Fluent API
+
+Chain methods for clean, readable code:
 
 ```javascript
-import { claude } from '@instantlyeasy/claude-code-sdk-ts';
-
-// Create a file with automatic result extraction
 const result = await claude()
-  .allowTools('Write')
-  .skipPermissions()
-  .query('Create a hello.txt file with "Hello from Claude!"')
+  .withModel('sonnet')              // Choose model
+  .allowTools('Read', 'Write')      // Configure permissions
+  .skipPermissions()                // Auto-accept edits
+  .inDirectory('/path/to/project')  // Set working directory
+  .query('Refactor this code')     // Your prompt
+  .asText();                       // Get response as text
+```
+
+### 📊 Response Parsing
+
+Extract exactly what you need:
+
+```javascript
+// Get plain text
+const text = await claude()
+  .query('Explain this concept')
+  .asText();
+
+// Parse JSON response
+const data = await claude()
+  .query('Return a JSON array of files')
+  .asJSON<string[]>();
+
+// Get the final result
+const result = await claude()
+  .query('Complete this task')
   .asResult();
 
-console.log('Task completed:', result);
-
-// Read and parse JSON data
-const config = await claude()
-  .allowTools('Read')
-  .query('Read package.json and return its content')
-  .asJSON();
-
-console.log('Version:', config.version);
-```
-
-### Session Management
-
-Maintain conversation context across multiple queries with built-in session handling:
-
-```javascript
-import { claude } from '@instantlyeasy/claude-code-sdk-ts';
-
-// Session management with explicit session ID
-const builder = claude().withModel('sonnet').skipPermissions();
-const parser = builder.query('Pick a random number from 1-100');
-const sessionId = await parser.getSessionId();
-const firstResponse = await parser.asText();
-const secondResponse = await builder.withSessionId(sessionId).query('What number did you pick?').asText();
-// Claude remembers the number from the first query
-
-// Manual session management
-const builder = claude().withModel('sonnet').skipPermissions();
-const parser = builder.query('Tell me a fun fact');
-const sessionId = await parser.getSessionId();
-const fact = await parser.asText();
-
-// Continue conversation with session ID
-const follow = await builder.withSessionId(sessionId).query('Tell me more about that topic').asText();
-```
-
-### Advanced Features
-
-```javascript
-import { claude, ConsoleLogger, LogLevel } from '@instantlyeasy/claude-code-sdk-ts';
-
-// Full example with logging, event handlers, and response parsing
-const logger = new ConsoleLogger(LogLevel.DEBUG);
-
-const analysis = await claude()
-  .withModel('opus')
-  .allowTools('Read', 'Grep', 'Glob')
-  .inDirectory(process.cwd())
-  .withLogger(logger)
-  .onToolUse(tool => console.log(`Using ${tool.name}...`))
-  .query('Find all TODO comments in the codebase')
+// Analyze tool usage
+const tools = await claude()
+  .allowTools('Read', 'Grep')
+  .query('Find all TODO comments')
   .asToolExecutions();
 
-// Get detailed tool execution results
-for (const execution of analysis) {
+for (const execution of tools) {
   console.log(`${execution.tool}: ${execution.isError ? 'Failed' : 'Success'}`);
 }
 ```
 
-### Production Features
+### 🔧 Tool Management
 
-#### Cancellation with AbortSignal
+Fine-grained control over Claude's capabilities:
 
 ```javascript
-import { claude, AbortError } from '@instantlyeasy/claude-code-sdk-ts';
+// Allow specific tools
+await claude()
+  .allowTools('Read', 'Grep', 'LS')
+  .query('Analyze this codebase')
+  .asText();
 
+// Deny dangerous tools
+await claude()
+  .denyTools('Bash', 'Write')
+  .query('Review this code')
+  .asText();
+
+// Read-only mode (no tools)
+await claude()
+  .allowTools() // Empty = deny all
+  .query('Explain this architecture')
+  .asText();
+```
+
+### 💬 Session Management
+
+Maintain conversation context across queries:
+
+```javascript
+const session = claude()
+  .withModel('sonnet')
+  .skipPermissions();
+
+// First query
+const response1 = await session
+  .query('Pick a random number between 1 and 100')
+  .asText();
+
+// Continue with context
+const sessionId = await session.query('').getSessionId();
+const response2 = await session
+  .withSessionId(sessionId)
+  .query('What number did you pick?')
+  .asText();
+// Claude remembers the number!
+```
+
+### 🚦 Cancellation Support
+
+Cancel long-running operations:
+
+```javascript
 const controller = new AbortController();
 
 // Cancel after 5 seconds
@@ -137,456 +160,265 @@ try {
 } catch (error) {
   if (error instanceof AbortError) {
     console.log('Query was cancelled');
-  } else {
-    throw error;
   }
 }
 ```
 
-**Note**: Node.js may show "AbortError" warnings when aborting child processes. These are expected and can be safely ignored.
+### 📝 Logging
 
-#### Read-Only Mode
+Built-in logging with multiple implementations:
 
 ```javascript
-// Enforce read-only mode by denying all tools
-const safeResponse = await claude()
-  .allowTools() // Empty = deny all tools
-  .query('Analyze this code')
+import { ConsoleLogger, LogLevel } from '@instantlyeasy/claude-code-sdk-ts';
+
+const logger = new ConsoleLogger(LogLevel.DEBUG);
+
+const response = await claude()
+  .withLogger(logger)
+  .query('Debug this issue')
   .asText();
+
+// Also available: JSONLogger, MultiLogger, NullLogger
 ```
 
-#### Message Streaming
+### 🎭 Event Handlers
 
-**Note**: The SDK streams complete messages, not individual tokens.
+React to events during execution:
 
 ```javascript
 await claude()
-  .query('Tell me a story')
+  .onMessage(msg => console.log('Message:', msg.type))
+  .onAssistant(msg => console.log('Claude:', msg))
+  .onToolUse(tool => console.log(`Using ${tool.name}...`))
+  .query('Perform analysis')
   .stream(async (message) => {
-    if (message.type === 'assistant') {
-      // Each message contains complete text, not token-by-token
-      console.log(message.content[0].text);
-    }
+    // Handle streaming messages
   });
 ```
 
-### Classic API (Original Syntax)
+## Environment Variables
 
-The original async generator API is still fully supported:
+The SDK automatically loads safe configuration from environment:
+
+- `DEBUG` - Enable debug mode (values: `true`, `1`, `yes`, `on`)
+- `VERBOSE` - Enable verbose output
+- `LOG_LEVEL` - Set log level (0-4)
+- `NODE_ENV` - Node environment
+
+**⚠️ Important**: API keys are NOT automatically loaded from `ANTHROPIC_API_KEY` for safety. This prevents accidental billing charges. See [Environment Variables Documentation](docs/ENVIRONMENT_VARIABLES.md).
+
+## Error Handling
+
+Enhanced error handling with categories and resolution hints:
 
 ```javascript
-import { query } from '@instantlyeasy/claude-code-sdk-ts';
+import { isEnhancedError, hasResolution } from '@instantlyeasy/claude-code-sdk-ts';
 
-// Simple Hello World
-for await (const message of query('Say "Hello World!"')) {
-  if (message.type === 'assistant') {
-    for (const block of message.content) {
-      if (block.type === 'text') {
-        console.log(block.text); // Outputs: Hello World!
-      }
+try {
+  await claude().query('Task').asText();
+} catch (error) {
+  if (isEnhancedError(error)) {
+    console.error(`${error.category} error: ${error.message}`);
+    if (hasResolution(error)) {
+      console.error('Try:', error.resolution);
     }
   }
 }
 ```
 
-## Authentication
+Error categories include:
+- `network` - Connection issues
+- `authentication` - Auth problems
+- `permission` - Access denied
+- `timeout` - Operation timeouts
+- `validation` - Invalid input
+- `cli` - Claude CLI issues
+- `configuration` - Config problems
 
-This SDK delegates all authentication to the Claude CLI. There are two ways to authenticate:
+## Advanced Usage
 
-### 1. Claude Pro/Max Account (Recommended)
-```bash
-# One-time setup - login with your Claude account
-claude login
-```
+### Configuration Files & Roles
 
-### 2. Alternative Authentication Methods
-Check your Claude CLI documentation for any additional authentication methods supported by your version.
-
-**Important**: The SDK does not handle authentication directly. If you see authentication errors, you need to authenticate using the Claude CLI first.
-
-## API Reference
-
-### Fluent API
-
-#### `claude(): QueryBuilder`
-
-Creates a new query builder for the fluent API.
-
-```typescript
-const builder = claude()
-  .withModel('sonnet')        // Set model
-  .allowTools('Read', 'Write') // Configure tools
-  .skipPermissions()          // Skip permission prompts
-  .withTimeout(30000)         // Set timeout
-  .inDirectory('/path')       // Set working directory
-  .withLogger(logger)         // Add logging
-  .onMessage(handler)         // Add event handlers
-  .withSessionId('session-id') // Continue existing session
-  .query('Your prompt');      // Execute query
-```
-
-#### Response Parsing Methods
-
-- `.asText()` - Extract plain text from assistant messages
-- `.asJSON<T>()` - Parse JSON from the response
-- `.asResult()` - Get the final result message
-- `.asToolExecutions()` - Get all tool executions with results
-- `.findToolResults(toolName)` - Find results from specific tool
-- `.getUsage()` - Get token usage and cost statistics
-- `.stream(callback)` - Stream messages with a callback
-
-### Classic API
-
-#### `query(prompt: string, options?: ClaudeCodeOptions): AsyncGenerator<Message>`
-
-Query Claude Code with a prompt and options.
-
-##### Parameters
-
-- `prompt` (string): The prompt to send to Claude Code
-- `options` (ClaudeCodeOptions, optional): Configuration options
-
-##### Returns
-
-An async generator that yields `Message` objects.
-
-### Types
-
-#### `ClaudeCodeOptions`
-
-```typescript
-interface ClaudeCodeOptions {
-  // Model selection
-  model?: string;              // Claude model to use (e.g., 'opus', 'sonnet')
-  
-  // Tool configuration
-  allowedTools?: ToolName[];   // Explicitly allowed tools
-  deniedTools?: ToolName[];    // Explicitly denied tools
-  
-  // Permission handling
-  permissionMode?: PermissionMode; // 'default' | 'acceptEdits' | 'bypassPermissions'
-  
-  // Session management
-  sessionId?: string; // Existing session ID to continue conversation
-  
-  // Execution environment
-  cwd?: string;               // Working directory
-  env?: Record<string, string>; // Environment variables
-  
-  // MCP (Model Context Protocol) servers
-  mcpServers?: MCPServer[];    // MCP servers to connect
-  
-  // SDK options
-  timeout?: number;           // Timeout in milliseconds
-  debug?: boolean;            // Enable debug logging (Note: may interfere with JSON parsing)
-  baseUrl?: string;           // Not applicable for CLI
-  maxTokens?: number;         // Not configurable via CLI
-  temperature?: number;       // Not configurable via CLI
-  tools?: ToolName[];         // Use allowedTools/deniedTools instead
-  context?: string[];         // Not implemented
-}
-```
-
-#### `Message`
-
-```typescript
-type Message = UserMessage | AssistantMessage | SystemMessage | ResultMessage;
-
-interface UserMessage {
-  type: 'user';
-  content: string;
-}
-
-interface AssistantMessage {
-  type: 'assistant';
-  content: ContentBlock[];
-}
-
-interface SystemMessage {
-  type: 'system';
-  content: string;
-}
-
-interface ResultMessage {
-  type: 'result';
-  content: string;
-  usage?: UsageInfo;
-  cost?: CostInfo;
-}
-```
-
-#### `ContentBlock`
-
-```typescript
-type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock;
-
-interface TextBlock {
-  type: 'text';
-  text: string;
-}
-
-interface ToolUseBlock {
-  type: 'tool_use';
-  id: string;
-  name: string;
-  input: Record<string, unknown>;
-}
-
-interface ToolResultBlock {
-  type: 'tool_result';
-  tool_use_id: string;
-  content: string | Array<TextBlock | unknown>;
-  is_error?: boolean;
-}
-```
-
-## New Features in v0.2.0
-
-### 🎯 Fluent API
-A chainable API that reduces boilerplate and improves readability:
-- Method chaining for configuration
-- Automatic response parsing
-- Built-in event handlers
-- Type-safe throughout
-
-### 📊 Response Parsers
-Extract exactly what you need from Claude's responses:
-- Text extraction with `.asText()`
-- JSON parsing with `.asJSON<T>()`
-- Tool execution analysis
-- Usage statistics and costs
-
-### 📝 Logging Framework
-Pluggable logging system for better debugging:
-- Multiple log levels (ERROR, WARN, INFO, DEBUG, TRACE)
-- Console and JSON loggers included
-- Custom logger support
-- Multi-logger for sending to multiple destinations
-
-### 📁 YAML Configuration Support
-External configuration with both JSON and YAML formats:
-- **YAML Support**: Better readability with comments and multi-line strings
-- **MCP Server Permissions**: Configure permissions at the server level
-- **Role-Based Access**: Define roles with specific permissions and templates
-- **Environment Variables**: Automatic expansion of ${VAR} in configs
-
-## Configuration Files
-
-The SDK supports loading configuration from external files in both JSON and YAML formats:
+Load settings and define reusable roles from YAML or JSON:
 
 ```javascript
-// Load YAML configuration (auto-detected by extension)
-const builder = await claude()
-  .withConfigFile('./config/mcpconfig.yaml')
-  .withRolesFile('./config/roles.yaml');
-
-// Apply a role with template variables
-builder.withRole('developer', {
-  language: 'TypeScript',
-  framework: 'React'
-});
+// Load configuration with roles
+await claude()
+  .withConfigFile('./config/claude.yaml')
+  .withRole('developer', {
+    language: 'TypeScript',
+    framework: 'React'
+  })
+  .query('Generate component')
+  .asText();
 ```
 
-### YAML Configuration Example
+#### Role System
 
+Roles provide reusable configurations with:
+- Model preferences
+- Tool permissions
+- Custom prompts with template variables
+- Context settings (temperature, max tokens)
+- Inheritance support
+
+Example YAML config with roles:
 ```yaml
-# mcpconfig.yaml
 version: "1.0"
 
 globalSettings:
   model: opus
   timeout: 60000
-  permissionMode: acceptEdits
 
-mcpServers:
-  file-system-mcp:
-    defaultPermission: allow
+# Define reusable roles
+roles:
+  developer:
+    model: sonnet
     tools:
-      Read: allow
-      Write: deny
-      Edit: ask
-
-tools:
-  allowed: [Read, Grep, LS]
-  denied: [Bash, WebSearch]
+      allowed: [Read, Write, Edit]
+      denied: [Delete]
+    prompts:
+      prefix: "You are an expert ${language} developer using ${framework}."
+    
+  senior-developer:
+    extends: developer  # Inherit from developer role
+    model: opus
+    permissions:
+      mode: acceptEdits
+    tools:
+      allowed: [TodoRead, TodoWrite]  # Additional tools
 ```
 
-See [examples/config/](./examples/config/) for complete configuration examples in both formats.
+```javascript
+// Using roles with template variables
+const response = await claude()
+  .withRolesFile('./roles.yaml')
+  .withRole('senior-developer', {
+    language: 'TypeScript',
+    framework: 'Next.js',
+    specialty: 'performance optimization'
+  })
+  .query('Optimize this React component')
+  .asText();
+```
+
+See [Roles Documentation](docs/NEW_FEATURES.md#rolespersonas-system) for complete details.
+
+### Production Features
+
+#### Token Usage & Costs
+```javascript
+const parser = await claude()
+  .query('Complex task')
+  .getParser();
+
+const usage = await parser.getUsage();
+console.log('Tokens:', usage.totalTokens);
+console.log('Cost: $', usage.totalCost);
+```
+
+#### Streaming
+```javascript
+await claude()
+  .query('Tell me a story')
+  .stream(async (message) => {
+    if (message.type === 'assistant') {
+      // Stream complete messages (not individual tokens)
+      console.log(message.content[0].text);
+    }
+  });
+```
+
+#### Custom Models & Endpoints
+```javascript
+const response = await claude()
+  .withModel('claude-3-opus-20240229')
+  .withTimeout(30000)
+  .query('Complex analysis')
+  .asText();
+```
 
 ## Examples
 
-Check out the [examples directory](./examples) for complete, runnable examples including:
-- **[fluent-api-demo.js](./examples/fluent-api-demo.js)** - Comprehensive showcase of the new fluent API
-- **[response-parsing-demo.js](./examples/response-parsing-demo.js)** - Advanced response parsing techniques
-- **[yaml-config-demo.js](./examples/yaml-config-demo.js)** - YAML configuration examples
-- **[new-features-demo.js](./examples/new-features-demo.js)** - MCP permissions, roles, and config files
-- **[Enhanced Features Examples](./examples/fluent-api/new-features/)** - Token streaming, error handling, and retry strategies
-- **[sessions.js](./examples/sessions.js)** - Session management and conversation context
-- Hello World (both classic and fluent syntax)
-- File operations
-- Code analysis
-- Interactive sessions
-- Web research
-- Project scaffolding
-- Error handling
+Comprehensive examples are available in the [examples directory](./examples):
 
-For detailed documentation on the fluent API, see [docs/FLUENT_API.md](./docs/FLUENT_API.md).
+- **[fluent-api-demo.js](./examples/fluent-api-demo.js)** - Complete fluent API showcase
+- **[sessions.js](./examples/sessions.js)** - Session management patterns
+- **[error-handling.js](./examples/fluent-api/error-handling.js)** - Advanced error handling
+- **[yaml-config-demo.js](./examples/yaml-config-demo.js)** - Configuration examples
+- **File Operations** - Reading, writing, and analyzing code
+- **Web Research** - Using Claude's web capabilities
+- **Interactive Sessions** - Building conversational interfaces
 
-## Migrating to Fluent API
+## Migration from Classic API
 
-The fluent API dramatically reduces boilerplate code. Here are some common migration patterns:
+The SDK maintains full backward compatibility. The classic `query()` function still works:
 
-### Before (Classic API):
 ```javascript
-let fullText = '';
-for await (const message of query('Generate a story')) {
-  if (message.type === 'assistant') {
-    for (const block of message.content) {
-      if (block.type === 'text') {
-        fullText += block.text;
-      }
-    }
-  }
+import { query } from '@instantlyeasy/claude-code-sdk-ts';
+
+for await (const message of query('Hello')) {
+  // Classic async generator API
 }
-console.log(fullText);
 ```
 
-### After (Fluent API):
-```javascript
-const fullText = await claude()
-  .query('Generate a story')
-  .asText();
-console.log(fullText);
-```
+However, we recommend the fluent API for new projects. See [Migration Guide](docs/FLUENT_API.md#migration-guide).
 
-More migration examples in [docs/FLUENT_API.md#migration-guide](./docs/FLUENT_API.md#migration-guide).
+## API Reference
 
-## Error Handling
+### `claude(): QueryBuilder`
+
+Creates a new query builder:
 
 ```typescript
-import { query, ClaudeSDKError, CLINotFoundError } from '@instantlyeasy/claude-code-sdk-ts';
-
-try {
-  for await (const message of query('Hello')) {
-    console.log(message);
-  }
-} catch (error) {
-  if (error instanceof CLINotFoundError) {
-    console.error('Please install Claude Code CLI first:');
-    console.error('npm install -g @anthropic-ai/claude-code');
-  } else if (error instanceof ClaudeSDKError) {
-    console.error('SDK error:', error.message);
-  } else if (error.message?.includes('authentication') || error.message?.includes('unauthorized')) {
-    console.error('Authentication required. Please run: claude login');
-  } else {
-    console.error('Unexpected error:', error);
-  }
-}
+claude()
+  .withModel(model: string)
+  .allowTools(...tools: ToolName[])
+  .denyTools(...tools: ToolName[])
+  .skipPermissions()
+  .withTimeout(ms: number)
+  .inDirectory(path: string)
+  .withSessionId(id: string)
+  .withSignal(signal: AbortSignal)
+  .withLogger(logger: Logger)
+  .withConfigFile(path: string)
+  .withRole(name: string, vars?: Record<string, string>)
+  .onMessage(handler: (msg: Message) => void)
+  .onAssistant(handler: (msg: AssistantMessage) => void)
+  .onToolUse(handler: (tool: ToolUseBlock) => void)
+  .query(prompt: string): ResponseParser
 ```
 
-## Development
+### Response Parser Methods
 
-```bash
-# Install dependencies
-npm install
+- `asText()` - Extract plain text
+- `asJSON<T>()` - Parse JSON response
+- `asResult()` - Get final result message
+- `asToolExecutions()` - Get tool execution details
+- `findToolResults(name)` - Find specific tool results
+- `getUsage()` - Get token usage stats
+- `getSessionId()` - Get session ID
+- `stream(callback)` - Stream messages
 
-# Build the SDK
-npm run build
+### Types
 
-# Run tests
-npm test
-
-# Type checking
-npm run typecheck
-
-# Linting
-npm run lint
-```
-
-## Enhanced Features 🚀
-
-The SDK now includes powerful enhanced features for production use:
-
-### 🌊 **Token-Level Streaming**
-Real-time streaming of Claude's responses, token by token
-
-### 🚨 **Typed Error Handling**
-Specific error classes with automatic detection and recovery strategies
-
-### 🔄 **Retry Strategies**
-Multiple retry patterns including exponential backoff, linear, and Fibonacci
-
-### 🔧 **Per-Call Tool Permissions**
-Dynamic tool permission management with context-aware decisions
-
-### 📊 **OpenTelemetry Integration**
-Full observability with traces, metrics, and distributed context
-
-### 🔐 **MCP Server Permissions**
-Control permissions at the MCP server level
-
-### 📁 **Configuration File Support**
-Load settings from JSON or YAML files with environment variable substitution
-
-### 👤 **Roles & Personas**
-Define comprehensive roles with permissions, models, and prompting templates
-
-### 🛠️ **Advanced Response Parsing**
-Enhanced utilities for extracting and transforming responses
-
-### 📝 **Flexible Logging**
-Multiple logger implementations with custom handlers
-
-For complete documentation on all enhanced features, see [docs/ENHANCED_FEATURES.md](./docs/ENHANCED_FEATURES.md).
+See [TypeScript definitions](./dist/index.d.ts) for complete type information.
 
 ## Changelog
 
-### v0.2.1 (Latest) 🚀
-**New Features:**
-- 📁 **YAML Configuration**: Support for YAML config files with auto-detection
-- 🔐 **MCP Server Permissions**: Configure permissions at the server level
-- 👥 **Role-Based Access**: Define roles with specific permissions and templates
-- 🔄 **Configuration Loading**: Load external configs with `withConfigFile()` and `withRolesFile()`
+See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
-**Improvements:**
-- YAML support for better config readability with comments
-- Environment variable expansion in configurations
-- Role inheritance for DRY configuration
-- Full test coverage for new configuration features
+## Contributing
 
-### v0.2.0
-**New Features:**
-- ✨ **Fluent API**: New chainable API with `claude()` for improved developer experience
-- 📊 **Response Parsers**: Built-in methods for extracting text, JSON, and tool results
-- 📝 **Logging Framework**: Pluggable logging system with multiple implementations
-- 🔧 **Event Handlers**: `onMessage()`, `onAssistant()`, and `onToolUse()` callbacks
-- 📈 **Usage Statistics**: Get token counts and cost information with `.getUsage()`
-
-**Improvements:**
-- 100% backward compatible - existing code continues to work
-- Comprehensive TypeScript support throughout
-- Extensive test coverage for all new features
-- New examples demonstrating fluent API patterns
-
-### v0.1.4
-- Include examples in npm package
-
-### v0.1.2
-- Fixed CLI command search to properly find `claude` command
-- Removed unsupported authentication flags (CLI handles auth internally)
-- Improved error messages for authentication failures
-- Updated documentation to clarify authentication flow
-
-### v0.1.1
-- Added `--print` flag for non-interactive mode
-- Fixed CLI path resolution
-- Initial TypeScript error fixes
-
-### v0.1.0
-- Initial release
-- TypeScript port of official Python SDK
-- Full support for Claude Code CLI features
+Contributions are welcome! Please read our contributing guidelines before submitting PRs.
 
 ## License
 
-MIT
+MIT © Daniel King & Claude
+
+## Links
+
+- [NPM Package](https://www.npmjs.com/package/@instantlyeasy/claude-code-sdk-ts)
+- [GitHub Repository](https://github.com/instantlyeasy/claude-code-sdk-ts)
+- [Claude Code CLI](https://github.com/anthropics/claude-code)
+- [Official Python SDK](https://github.com/anthropics/claude-code-sdk)
