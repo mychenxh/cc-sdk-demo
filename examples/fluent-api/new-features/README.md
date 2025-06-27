@@ -47,6 +47,22 @@ Explores various retry patterns:
 node retry-strategies.js
 ```
 
+### 4. Interactive Streaming Session (`interactive-streaming.js`)
+
+Interactive CLI chat with visual typewriter streaming:
+- Real-time character-by-character display of responses
+- Conversation history management
+- Adjustable streaming speed (fast/normal/slow)
+- Model switching and debug mode
+- Session commands and help system
+
+**Features the only working visual streaming pattern** - responses appear with realistic typewriter effect!
+
+**Run:**
+```bash
+node interactive-streaming.js
+```
+
 ## Prerequisites
 
 Make sure you have the SDK installed:
