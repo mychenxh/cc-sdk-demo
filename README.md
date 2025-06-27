@@ -8,6 +8,12 @@
 
 Unofficial TypeScript SDK for [Claude Code](https://github.com/anthropics/claude-code) - the powerful CLI tool for interacting with Claude.
 
+**✨ What's New in v0.3.3:**
+- 🎬 **Interactive streaming session** with working visual typewriter effects
+- 🛡️ **Advanced error handling** with retry strategies and typed errors
+- 📊 **Token streaming analysis** with honest documentation about current behavior
+- 🔧 **Production-ready examples** that actually work as advertised
+
 > **Note**: For the classic async generator API, see [Classic API Documentation](docs/CLASSIC_API.md).
 
 ## Installation
@@ -16,9 +22,11 @@ Unofficial TypeScript SDK for [Claude Code](https://github.com/anthropics/claude
 npm install @instantlyeasy/claude-code-sdk-ts
 # or
 yarn add @instantlyeasy/claude-code-sdk-ts
-# or
+# or  
 pnpm add @instantlyeasy/claude-code-sdk-ts
 ```
+
+**Latest Version:** `v0.3.3` with enhanced features and working visual streaming!
 
 **Prerequisites:**
 - Node.js 18 or later
@@ -338,14 +346,87 @@ const response = await claude()
   .asText();
 ```
 
+## 🚀 Enhanced Features (v0.3.3)
+
+### ✨ Visual Token Streaming
+
+Create typewriter effects and real-time response display:
+
+```javascript
+import { claude, createTokenStream } from '@instantlyeasy/claude-code-sdk-ts';
+
+// Collect response for controlled display
+const messageGenerator = claude()
+  .withModel('sonnet')
+  .queryRaw('Write a story about AI');
+
+const tokenStream = createTokenStream(messageGenerator);
+const allTokens = [];
+
+for await (const chunk of tokenStream.tokens()) {
+  allTokens.push(chunk.token);
+}
+
+// Display with typewriter effect
+const fullText = allTokens.join('');
+for (const char of fullText) {
+  process.stdout.write(char);
+  await new Promise(resolve => setTimeout(resolve, 30));
+}
+```
+
+### 🛡️ Advanced Error Handling
+
+Handle specific error types with smart retry logic:
+
+```javascript
+import { claude, detectErrorType, withRetry } from '@instantlyeasy/claude-code-sdk-ts';
+
+try {
+  const result = await withRetry(
+    async () => claude().query('Complex task').asText(),
+    {
+      maxAttempts: 3,
+      strategy: 'exponential',
+      shouldRetry: (error) => {
+        const errorType = detectErrorType(error.message);
+        return ['network_error', 'timeout_error'].includes(errorType);
+      }
+    }
+  );
+} catch (error) {
+  const errorType = detectErrorType(error.message);
+  console.log(`Failed with error type: ${errorType}`);
+}
+```
+
+### 🎬 Interactive Streaming Session
+
+**NEW!** Complete chat interface with visual streaming:
+
+```bash
+# Try the interactive streaming example
+node examples/fluent-api/new-features/interactive-streaming.js
+```
+
+Features working character-by-character display, conversation history, speed control, and model switching!
+
 ## Examples
 
 Comprehensive examples are available in the [examples directory](./examples):
 
+### **Basic Examples**
 - **[fluent-api-demo.js](./examples/fluent-api-demo.js)** - Complete fluent API showcase
 - **[sessions.js](./examples/sessions.js)** - Session management patterns
-- **[error-handling.js](./examples/fluent-api/error-handling.js)** - Advanced error handling
 - **[yaml-config-demo.js](./examples/yaml-config-demo.js)** - Configuration examples
+
+### **Advanced Features** ([new-features directory](./examples/fluent-api/new-features/))
+- **[interactive-streaming.js](./examples/fluent-api/new-features/interactive-streaming.js)** - 🎬 **Interactive chat with visual streaming**
+- **[token-streaming.js](./examples/fluent-api/new-features/token-streaming.js)** - Working typewriter effects
+- **[error-handling.js](./examples/fluent-api/new-features/error-handling.js)** - Advanced error patterns
+- **[retry-strategies.js](./examples/fluent-api/new-features/retry-strategies.js)** - Multiple retry strategies
+
+### **Core Examples**
 - **File Operations** - Reading, writing, and analyzing code
 - **Web Research** - Using Claude's web capabilities
 - **Interactive Sessions** - Building conversational interfaces
