@@ -166,10 +166,14 @@ export interface TelemetryConfig {
   serviceVersion?: string;
   /** Environment */
   environment?: string;
+  /** General endpoint (can be used for both traces and metrics) */
+  endpoint?: string;
   /** Endpoint for traces */
   traceEndpoint?: string;
   /** Endpoint for metrics */
   metricsEndpoint?: string;
+  /** Headers for authentication */
+  headers?: Record<string, string>;
   /** Export interval in ms */
   exportInterval?: number;
   /** Batch size for export */
@@ -246,15 +250,18 @@ export interface QueryEndEvent {
   /** Duration in ms */
   duration: number;
   /** Token usage */
-  tokens: {
-    input: number;
-    output: number;
-    total: number;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_creation_input_tokens?: number;
+    cache_read_input_tokens?: number;
   };
   /** Success status */
   success: boolean;
   /** Result summary */
   resultSummary?: string;
+  /** Error if failed */
+  error?: Error;
 }
 
 // Query error event
@@ -274,7 +281,7 @@ export interface ToolStartEvent {
   /** Tool use ID */
   toolUseId: string;
   /** Tool name */
-  toolName: string;
+  tool: string;
   /** Tool input */
   input: unknown;
   /** Parent query ID */
@@ -287,12 +294,16 @@ export interface ToolStartEvent {
 export interface ToolEndEvent {
   /** Tool use ID */
   toolUseId: string;
+  /** Tool name */
+  tool: string;
   /** Duration in ms */
   duration: number;
   /** Success status */
   success: boolean;
   /** Result size in bytes */
   resultSize?: number;
+  /** Error if failed */
+  error?: Error;
 }
 
 // Tool error event

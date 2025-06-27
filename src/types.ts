@@ -126,7 +126,7 @@ export interface ClaudeCodeOptions {
   addDirectories?: string[];
 }
 
-// Additional types for internal use
+// Additional types for internal use - based on actual Claude Code CLI output
 export interface CLIMessage {
   type: 'message';
   data: Message;
@@ -145,7 +145,47 @@ export interface CLIEnd {
   type: 'end';
 }
 
-export type CLIOutput = CLIMessage | CLIError | CLIEnd;
+// Actual CLI output types (what the CLI actually returns)
+export interface CLIAssistantOutput {
+  type: 'assistant';
+  message: {
+    content: ContentBlock[];
+  };
+  session_id?: string;
+}
+
+export interface CLISystemOutput {
+  type: 'system';
+  subtype?: string;
+  session_id?: string;
+}
+
+export interface CLIResultOutput {
+  type: 'result';
+  subtype?: string;
+  content?: string;
+  session_id?: string;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_creation_input_tokens?: number;
+    cache_read_input_tokens?: number;
+  };
+  cost?: {
+    total_cost_usd?: number;
+  };
+}
+
+export interface CLIErrorOutput {
+  type: 'error';
+  error: {
+    message: string;
+    code?: string;
+    stack?: string;
+  };
+}
+
+export type CLIOutput = CLIAssistantOutput | CLISystemOutput | CLIResultOutput | CLIErrorOutput | CLIMessage | CLIError | CLIEnd;
 
 // Re-export new permission and configuration types
 export * from './types/permissions.js';

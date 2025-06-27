@@ -1,5 +1,5 @@
 import { SubprocessCLITransport } from './transport/subprocess-cli.js';
-import type { ClaudeCodeOptions, Message, CLIOutput, AssistantMessage } from '../types.js';
+import type { ClaudeCodeOptions, Message, CLIOutput, AssistantMessage, CLIAssistantOutput, CLIErrorOutput } from '../types.js';
 import { detectErrorType, createTypedError } from '../errors.js';
 import { loadSafeEnvironmentOptions } from '../environment.js';
 import { applyEnvironmentOptions } from './options-merger.js';
@@ -38,7 +38,7 @@ export class InternalClient {
     switch (output.type) {
       case 'assistant': {
         // Extract the actual assistant message from the wrapper
-        const assistantMsg = output as AssistantMessage;
+        const assistantMsg = output as CLIAssistantOutput;
         if (assistantMsg.message) {
           // Return a simplified assistant message with just the content
           return {
@@ -47,21 +47,37 @@ export class InternalClient {
             session_id: assistantMsg.session_id
           } as AssistantMessage;
         }
-        return output as Message;
+        return {
+          type: 'assistant',
+          content: [],
+          session_id: assistantMsg.session_id
+        } as AssistantMessage;
       }
         
       case 'system':
         // System messages (like init) - skip these
         return null;
         
-      case 'result':
+      case 'result': {
         // Result message with usage stats - return it
-        return output as Message;
+        const resultMsg = output as any; // Type assertion for now
+        return {
+          type: 'result',
+          subtype: resultMsg.subtype,
+          content: resultMsg.content || '',
+          session_id: resultMsg.session_id,
+          usage: resultMsg.usage,
+          cost: {
+            total_cost: resultMsg.cost?.total_cost_usd
+          }
+        } as Message;
+      }
         
       case 'error': {
-        const errorMessage = output.error?.message || 'Unknown error';
+        const errorOutput = output as CLIErrorOutput;
+        const errorMessage = errorOutput.error?.message || 'Unknown error';
         const errorType = detectErrorType(errorMessage);
-        throw createTypedError(errorType, errorMessage, output.error);
+        throw createTypedError(errorType, errorMessage, errorOutput.error);
       }
       
       default:

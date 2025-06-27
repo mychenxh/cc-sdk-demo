@@ -5,6 +5,9 @@
 import type { PermissionMode, ToolName } from '../types.js';
 import type { ToolPermission } from './permissions.js';
 
+// Re-export ToolPermission for use in config
+export type { ToolPermission };
+
 /**
  * Schema version for configuration files
  */
@@ -43,6 +46,10 @@ export interface GlobalConfigSettings {
   cwd?: string;
   /** Environment variables */
   env?: Record<string, string>;
+  /** Temperature for model responses */
+  temperature?: number;
+  /** Maximum tokens for model responses */
+  maxTokens?: number;
 }
 
 /**
