@@ -6,7 +6,7 @@ import type {
   ErrorCategory, 
   EnhancedErrorOptions, 
   IEnhancedError 
-} from '../../.dev/tdd/from-cli-insights/interfaces.js';
+} from '../types/environment.js';
 
 /**
  * Enhanced base error class with category and resolution

@@ -21,11 +21,21 @@ export type ErrorCategory =
   | 'unknown';
 
 export interface EnhancedErrorOptions {
-  category?: ErrorCategory;
+  category: ErrorCategory;
   context?: Record<string, unknown>;
   retryable?: boolean;
   resolution?: string;
   helpUrl?: string;
+  statusCode?: number;
+  cause?: Error;
+}
+
+export interface IEnhancedError extends Error {
+  category: ErrorCategory;
+  resolution?: string;
+  statusCode?: number;
+  cause?: Error;
+  context?: Record<string, unknown>;
 }
 
 /**

@@ -6,7 +6,7 @@
  * provided by the user.
  */
 
-import type { SafeEnvironmentOptions } from '../.dev/tdd/from-cli-insights/interfaces.js';
+import type { SafeEnvironmentOptions } from './types/environment.js';
 
 /**
  * Parse boolean environment variable values

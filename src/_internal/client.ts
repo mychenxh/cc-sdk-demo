@@ -1,5 +1,5 @@
 import { SubprocessCLITransport } from './transport/subprocess-cli.js';
-import type { ClaudeCodeOptions, Message } from '../types.js';
+import type { ClaudeCodeOptions, Message, CLIOutput, AssistantMessage } from '../types.js';
 import { detectErrorType, createTypedError } from '../errors.js';
 import { loadSafeEnvironmentOptions } from '../environment.js';
 import { applyEnvironmentOptions } from './options-merger.js';
@@ -33,43 +33,35 @@ export class InternalClient {
     }
   }
 
-  private parseMessage(output: Record<string, unknown>): Message | null {
-    // Handle stream-json format directly from CLI
+  private parseMessage(output: CLIOutput): Message | null {
+    // Handle CLIOutput types based on actual CLI output
     switch (output.type) {
-      case 'user':
-        return {
-          type: 'user',
-          content: output.message?.content || ''
-        };
-      
-      case 'assistant':
-        return {
-          type: 'assistant',
-          content: output.message?.content || []
-        };
+      case 'assistant': {
+        // Extract the actual assistant message from the wrapper
+        const assistantMsg = output as AssistantMessage;
+        if (assistantMsg.message) {
+          // Return a simplified assistant message with just the content
+          return {
+            type: 'assistant',
+            content: assistantMsg.message.content,
+            session_id: assistantMsg.session_id
+          } as AssistantMessage;
+        }
+        return output as Message;
+      }
         
       case 'system':
-        return {
-          type: 'system',
-          subtype: output.subtype,
-          data: output
-        };
+        // System messages (like init) - skip these
+        return null;
         
       case 'result':
-        return {
-          type: 'result',
-          subtype: output.subtype,
-          content: output.result || '',
-          usage: output.usage,
-          cost: {
-            total_cost: output.total_cost_usd
-          }
-        };
-      
+        // Result message with usage stats - return it
+        return output as Message;
+        
       case 'error': {
-        const errorMessage = (output.error as { message?: string })?.message || 'Unknown error';
+        const errorMessage = output.error?.message || 'Unknown error';
         const errorType = detectErrorType(errorMessage);
-        throw createTypedError(errorType, errorMessage, output.error as { code?: string; stack?: string });
+        throw createTypedError(errorType, errorMessage, output.error);
       }
       
       default:

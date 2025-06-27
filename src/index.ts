@@ -53,7 +53,7 @@ export { AbortError } from './errors.js';
 export { 
   isEnhancedError, 
   hasResolution 
-} from '../.dev/tdd/from-cli-insights/interfaces.js';
+} from './types/environment.js';
 export { API_KEY_SAFETY_WARNING } from './environment.js';
 
 // Export new fluent API (backward compatible - original query function still available)

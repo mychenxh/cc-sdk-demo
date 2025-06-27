@@ -3,7 +3,7 @@
  */
 
 import type { ClaudeCodeOptions } from '../types.js';
-import type { SafeEnvironmentOptions } from '../../.dev/tdd/from-cli-insights/interfaces.js';
+import type { SafeEnvironmentOptions } from '../types/environment.js';
 
 /**
  * Apply environment options to user options
