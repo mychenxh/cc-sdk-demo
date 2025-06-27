@@ -6,11 +6,13 @@ This directory contains examples demonstrating the advanced features of the Clau
 
 ### 1. Token Streaming (`token-streaming.js`)
 
-Demonstrates real-time token streaming capabilities:
-- Basic token streaming
-- Pause/resume control
-- Progress indicators
-- Stream metrics
+Demonstrates practical real-time token streaming patterns:
+- Basic token streaming with timing metrics
+- Visual streaming progress with spinner indicators  
+- Character-by-character typewriter effect
+- Stream metrics and performance analysis
+
+**Note**: Uses `queryRaw()` and `createTokenStream()` for streaming capabilities.
 
 **Run:**
 ```bash
