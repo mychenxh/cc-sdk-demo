@@ -6,13 +6,13 @@ This directory contains examples demonstrating the advanced features of the Clau
 
 ### 1. Token Streaming (`token-streaming.js`)
 
-Demonstrates practical real-time token streaming patterns:
-- Basic token streaming with timing metrics
-- Visual streaming progress with spinner indicators  
-- Character-by-character typewriter effect
-- Stream metrics and performance analysis
+Demonstrates token streaming patterns and workarounds:
+- SDK token stream analysis (shows current chunked delivery behavior)
+- Response collection pattern for processing complete responses
+- **Character-by-character typewriter effect** (working visual streaming)
+- Stream metrics and timing analysis
 
-**Note**: Uses `queryRaw()` and `createTokenStream()` for streaming capabilities.
+**Important**: Claude Code CLI currently delivers responses in chunks rather than true token-by-token streaming. Example 3 shows how to create actual visual streaming effects by controlling display timing after collection.
 
 **Run:**
 ```bash
