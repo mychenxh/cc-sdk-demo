@@ -1,4 +1,4 @@
-import { claude } from '../../dist/index.mjs';
+import { claude } from '../../dist/index.js';
 
 /**
  * Web Research Example using Fluent API

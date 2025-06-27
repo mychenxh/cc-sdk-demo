@@ -12,7 +12,7 @@
  * - Implementing typewriter effects in UIs
  */
 
-import { claude, createTokenStream } from '@instantlyeasy/claude-code-sdk-ts';
+import { claude, createTokenStream } from '../../../dist/index.js';
 
 async function tokenStreamingExample() {
   console.log('📝 Token Streaming Example\n');

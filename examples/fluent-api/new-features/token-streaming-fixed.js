@@ -9,7 +9,7 @@
  * Note: Claude Code only supports 'sonnet' and 'opus' models.
  */
 
-import { claude, createTokenStream } from '@instantlyeasy/claude-code-sdk-ts';
+import { claude, createTokenStream } from '../../../dist/index.js';
 
 async function tokenStreamingExample() {
   console.log('📝 Token Streaming Example\n');

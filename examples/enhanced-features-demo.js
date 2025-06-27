@@ -19,7 +19,7 @@ import {
   createRetryExecutor,
   isRateLimitError,
   isToolPermissionError
-} from '../dist/index.mjs';
+} from '../dist/index.js';
 
 async function runDemo() {
   console.log('🚀 Claude Code SDK Enhanced Features Demo\n');

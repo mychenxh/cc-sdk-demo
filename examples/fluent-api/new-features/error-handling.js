@@ -22,7 +22,7 @@ import {
   isNetworkError,
   isTimeoutError,
   isValidationError
-} from '@instantlyeasy/claude-code-sdk-ts';
+} from '../../../dist/index.js';
 
 async function errorHandlingExample() {
   console.log('🛡️ Advanced Error Handling Example\n');

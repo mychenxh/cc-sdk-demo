@@ -19,7 +19,7 @@ import {
   createLinearRetryExecutor,
   createFibonacciRetryExecutor,
   withRetry
-} from '@instantlyeasy/claude-code-sdk-ts';
+} from '../../../dist/index.js';
 
 async function retryStrategiesExample() {
   console.log('🔄 Retry Strategies Example\n');
