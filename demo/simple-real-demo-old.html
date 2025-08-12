@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code SDK - 真实数据演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .config-section {
+            padding: 30px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .config-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1e293b;
+        }
+
+        .config-form {
+            display: grid;
+            gap: 20px;
+            max-width: 600px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-group input {
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        .config-button {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            justify-self: start;
+        }
+
+        .config-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .config-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .status.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .status.info {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        .demo-section {
+            padding: 30px;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-top: 20px;
+        }
+
+        .demo-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .demo-card:hover {
+            border-color: #4f46e5;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+        }
+
+        .demo-card h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1e293b;
+        }
+
+        .demo-card p {
+            color: #64748b;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .demo-button {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .demo-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .demo-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-area {
+            margin-top: 16px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            min-height: 100px;
+            white-space: pre-wrap;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer {
+            background: #1e293b;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .footer h3 {
+            margin-bottom: 16px;
+            font-size: 1.3rem;
+        }
+
+        .footer p {
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+
+        .tech-stack {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tech-item {
+            background: rgba(255,255,255,0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                margin: 10px;
+                border-radius: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Claude Code SDK - 真实数据演示</h1>
+            <p>连接真实的Claude Code SDK，体验完整的AI编程助手功能</p>
+        </div>
+
+        <!-- API配置区域 -->
+        <div class="config-section">
+            <h2 class="config-title">⚙️ API 配置</h2>
+            <div class="config-form">
+                <div class="form-group">
+                    <label for="apiKey">Anthropic API 密钥:</label>
+                    <input type="password" id="apiKey" placeholder="请输入您的Anthropic API密钥" value="ebf258b6c7574367a1a9566ed7d6b13f.MbvZz02SRfRGFMRo">
+                </div>
+                <div class="form-group">
+                    <label for="baseUrl">API 基础URL (可选):</label>
+                    <input type="text" id="baseUrl" placeholder="https://api.anthropic.com" value="https://open.bigmodel.cn/api/anthropic">
+                </div>
+                <button class="config-button" onclick="configureAPI()">配置 API</button>
+                <div id="config-status"></div>
+            </div>
+        </div>
+
+        <!-- 演示功能区域 -->
+        <div class="demo-section">
+            <h2 class="config-title">🎯 功能演示</h2>
+            <div class="demo-grid">
+                <!-- 基础查询 -->
+                <div class="demo-card">
+                    <h3>💬 基础查询</h3>
+                    <p>使用真实的Claude API进行基础对话查询，体验AI助手的智能回复能力。</p>
+                    <div class="query-input-section">
+                        <label for="basicQueryInput" style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">查询内容:</label>
+                        <textarea 
+                            id="basicQueryInput" 
+                            placeholder="请输入您想要查询的内容..." 
+                            style="width: 100%; min-height: 80px; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; box-sizing: border-box; margin-bottom: 12px; transition: border-color 0.2s ease;"
+                            onfocus="this.style.borderColor='#007bff'" 
+                            onblur="this.style.borderColor='#e1e5e9'">你好，请简单介绍一下你自己。</textarea>
+                    </div>
+                    <button class="demo-button" onclick="runBasicQuery()" disabled>运行基础查询</button>
+                    <div class="result-area" id="basic-result">请先配置API密钥</div>
+                </div>
+
+                <!-- 代码分析 -->
+                <div class="demo-card">
+                    <h3>🔍 代码分析</h3>
+                    <p>让Claude分析项目代码结构，提供代码质量评估和改进建议。</p>
+                    <button class="demo-button" onclick="runCodeAnalysis()" disabled>运行代码分析</button>
+                    <div class="result-area" id="analysis-result">请先配置API密钥</div>
+                </div>
+
+                <!-- 文件操作 -->
+                <div class="demo-card">
+                    <h3>📁 文件操作</h3>
+                    <p>演示Claude的文件读写能力，包括创建、修改和重构代码文件。</p>
+                    <button class="demo-button" onclick="runFileOperation()" disabled>运行文件操作</button>
+                    <div class="result-area" id="file-result">请先配置API密钥</div>
+                </div>
+
+                <!-- 流式响应 -->
+                <div class="demo-card">
+                    <h3>🌊 流式响应</h3>
+                    <p>体验Claude的流式响应功能，实时接收AI生成的长篇内容，如报告、文章等。</p>
+                    <button class="demo-button" onclick="runStreamingQuery()" disabled>运行流式查询</button>
+                    <div class="result-area" id="streaming-result">请先配置API密钥</div>
+                </div>
+
+                <!-- 高级配置 -->
+                <div class="demo-card">
+                    <h3>⚡ 高级配置</h3>
+                    <p>展示Claude SDK的高级配置选项，包括超时设置、工具权限、消息监听等功能。</p>
+                    <button class="demo-button" onclick="runAdvancedQuery()" disabled>运行高级配置</button>
+                    <div class="result-area" id="advanced-result">请先配置API密钥</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <h3>🛠️ 技术说明</h3>
+            <p>这是一个真实的Claude Code SDK演示应用，连接Anthropic API获取实际数据。</p>
+            <p>需要有效的Anthropic API密钥才能正常使用所有功能。</p>
+            <div class="tech-stack">
+                <span class="tech-item">Real Claude API</span>
+                <span class="tech-item">TypeScript SDK</span>
+                <span class="tech-item">Anthropic</span>
+                <span class="tech-item">Live Data</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        var claudeSDK = null;
+        var apiConfigured = false;
+        var currentApiKey = '';
+        var currentBaseUrl = 'https://api.anthropic.com';
+
+        // API配置函数
+        function configureAPI() {
+            var apiKey = document.getElementById('apiKey').value.trim();
+            var baseUrl = document.getElementById('baseUrl').value.trim() || 'https://api.anthropic.com';
+            
+            if (!apiKey) {
+                showStatus('config-status', '请输入API密钥', 'error');
+                return;
+            }
+            
+            // 验证API密钥格式
+            //if (!apiKey.startsWith('sk-ant-')) {
+            //    showStatus('config-status', 'API密钥格式不正确，应以"sk-ant-"开头', 'error');
+            //    return;
+            //}
+            
+            showStatus('config-status', '正在验证API密钥...', 'info');
+            
+            // 验证API密钥
+            validateAPIKey(apiKey, baseUrl)
+                .then(function(isValid) {
+                    if (isValid) {
+                        currentApiKey = apiKey;
+                        currentBaseUrl = baseUrl;
+                        apiConfigured = true;
+                        
+                        showStatus('config-status', '✅ API配置成功！可以开始使用功能演示', 'success');
+                        enableDemoButtons();
+                    } else {
+                        showStatus('config-status', '❌ API密钥验证失败，请检查密钥是否正确', 'error');
+                    }
+                })
+                .catch(function(error) {
+                    console.error('API验证错误:', error);
+                    showStatus('config-status', '❌ API验证过程中出现错误: ' + error.message, 'error');
+                });
+        }
+
+        // API密钥验证函数
+        function validateAPIKey(apiKey, baseUrl) {
+            return new Promise(function(resolve, reject) {
+                // 创建测试请求
+                var testUrl = baseUrl + '/v1/messages';
+                var testData = {
+                    model: 'claude-3-haiku-20240307',
+                    max_tokens: 10,
+                    messages: [{
+                        role: 'user',
+                        content: 'Hello'
+                    }]
+                };
+
+                fetch(testUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify(testData)
+                })
+                .then(function(response) {
+                    if (response.ok || response.status === 200) {
+                        resolve(true);
+                    } else if (response.status === 401) {
+                        resolve(false);
+                    } else {
+                        resolve(true); // 其他错误也认为密钥可能有效
+                    }
+                })
+                .catch(function(error) {
+                    console.warn('API验证请求失败，但假设密钥有效:', error);
+                    resolve(true); // 网络错误时假设密钥有效
+                });
+            });
+        }
+
+        // 状态显示函数
+        function showStatus(elementId, message, type) {
+            var element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = message;
+                element.className = 'status ' + type;
+                element.style.display = 'block';
+            }
+        }
+
+        // 启用演示按钮
+        function enableDemoButtons() {
+            var buttons = document.querySelectorAll('.demo-button');
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].disabled = false;
+            }
+        }
+
+        // 基础查询演示
+        function runBasicQuery() {
+            if (!apiConfigured) {
+                showResult('basic-result', '请先配置API密钥');
+                return;
+            }
+
+            // 获取用户输入的查询内容
+            var queryInput = document.getElementById('basicQueryInput');
+            var queryText = queryInput ? queryInput.value.trim() : '';
+            
+            // 如果用户没有输入内容，使用默认提示
+            if (!queryText) {
+                queryText = '你好，请简单介绍一下你自己。';
+            }
+
+            showResult('basic-result', '<div class="loading"></div>正在查询Claude...');
+
+            // 使用用户输入的内容进行API调用
+            makeClaudeRequest(queryText, 'basic-result');
+        }
+
+        // 代码分析演示
+        function runCodeAnalysis() {
+            if (!apiConfigured) {
+                showResult('analysis-result', '❌ 请先配置API密钥\n\n请在页面顶部输入有效的Claude API密钥后再试。');
+                return;
+            }
+
+            // 显示加载状态
+            var loadingMsg = '<div class="loading"></div>🔍 正在分析代码...\n\n';
+            loadingMsg += '📋 分析内容:\n';
+            loadingMsg += '• 时间复杂度分析\n';
+            loadingMsg += '• 空间复杂度分析\n';
+            loadingMsg += '• 性能优化建议\n';
+            loadingMsg += '• 代码改进方案\n\n';
+            loadingMsg += '⏳ 预计需要 5-10 秒，请稍候...';
+            showResult('analysis-result', loadingMsg);
+
+            var codeToAnalyze = `
+function fibonacci(n) {
+    if (n <= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+`;
+
+            var prompt = '请详细分析以下JavaScript代码：\n\n```javascript' + codeToAnalyze + '```\n\n';
+            prompt += '请提供以下分析：\n';
+            prompt += '1. 时间复杂度分析\n';
+            prompt += '2. 空间复杂度分析\n';
+            prompt += '3. 算法效率评估\n';
+            prompt += '4. 性能优化建议\n';
+            prompt += '5. 改进后的代码实现\n\n';
+            prompt += '请用中文回答，并提供具体的代码示例。';
+            
+            // 添加超时处理
+            var timeoutId = setTimeout(function() {
+                showResult('analysis-result', '⏰ 请求超时\n\n分析请求耗时过长，可能的原因：\n• 网络连接不稳定\n• API服务响应缓慢\n• 请求内容过于复杂\n\n建议：\n• 检查网络连接\n• 稍后重试\n• 确认API密钥有效性');
+            }, 30000); // 30秒超时
+            
+            // 重写makeClaudeRequest调用以包含超时清理
+            makeClaudeRequestWithTimeout(prompt, 'analysis-result', timeoutId);
+        }
+        
+        // 带超时处理的Claude请求函数
+        function makeClaudeRequestWithTimeout(prompt, resultElementId, timeoutId) {
+            var requestData = {
+                model: 'claude-3-haiku-20240307',
+                max_tokens: 1500, // 增加token限制以获得更详细的分析
+                messages: [{
+                    role: 'user',
+                    content: prompt
+                }]
+            };
+
+            fetch(currentBaseUrl + '/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': currentApiKey,
+                    'anthropic-version': '2023-06-01'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(function(response) {
+                clearTimeout(timeoutId); // 清除超时定时器
+                if (!response.ok) {
+                    throw new Error('API请求失败: ' + response.status + ' ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                console.log('Claude API响应:', data);
+                
+                if (data.content && data.content[0]) {
+                    var responseText = data.content[0].text;
+                    
+                    // 检查响应文本是否为空或只包含空白字符
+                    if (responseText && responseText.trim()) {
+                        var formattedResult = '🎯 代码分析结果\n';
+                        formattedResult += '='.repeat(50) + '\n\n';
+                        formattedResult += responseText;
+                        formattedResult += '\n\n' + '='.repeat(50);
+                        formattedResult += '\n✅ 分析完成 | 模型: ' + requestData.model + ' | Token: ' + requestData.max_tokens;
+                        showResult(resultElementId, formattedResult);
+                    } else {
+                        // 处理空响应的情况
+                        var emptyResponseMsg = '⚠️ Claude返回了空响应\n\n';
+                        emptyResponseMsg += '可能的原因:\n';
+                        emptyResponseMsg += '• 代码分析请求过于简单\n';
+                        emptyResponseMsg += '• API配置问题\n';
+                        emptyResponseMsg += '• 网络连接问题\n\n';
+                        emptyResponseMsg += '建议尝试:\n';
+                        emptyResponseMsg += '• 点击重试按钮\n';
+                        emptyResponseMsg += '• 检查API密钥配置\n';
+                        emptyResponseMsg += '• 稍后再试';
+                        emptyResponseMsg += '\n\n<button onclick="runCodeAnalysis()" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄 重试分析</button>';
+                        showResult(resultElementId, emptyResponseMsg);
+                    }
+                } else if (data.error) {
+                    // 处理API错误响应
+                    var errorMsg = '❌ Claude API错误\n\n';
+                    errorMsg += '错误类型: ' + (data.error.type || '未知错误') + '\n';
+                    errorMsg += '错误信息: ' + (data.error.message || '无详细信息') + '\n\n';
+                    errorMsg += '建议解决方案:\n';
+                    if (data.error.type === 'authentication_error') {
+                        errorMsg += '• 检查API密钥是否正确\n';
+                        errorMsg += '• 确认API密钥有效期\n';
+                    } else if (data.error.type === 'rate_limit_error') {
+                        errorMsg += '• 请求频率过高，请稍后重试\n';
+                        errorMsg += '• 考虑升级API计划\n';
+                    } else {
+                        errorMsg += '• 检查网络连接\n';
+                        errorMsg += '• 稍后重试\n';
+                    }
+                    errorMsg += '\n<button onclick="runCodeAnalysis()" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄 重试分析</button>';
+                    showResult(resultElementId, errorMsg);
+                } else {
+                    // 处理意外的响应格式
+                    var unexpectedMsg = '⚠️ 收到了意外的响应格式\n\n';
+                    unexpectedMsg += '这可能是API服务的临时问题。\n\n';
+                    unexpectedMsg += '响应详情: ' + JSON.stringify(data, null, 2);
+                    unexpectedMsg += '\n\n<button onclick="runCodeAnalysis()" style="padding: 8px 16px; background: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer;">🔄 重试分析</button>';
+                    showResult(resultElementId, unexpectedMsg);
+                }
+            })
+            .catch(function(error) {
+                clearTimeout(timeoutId); // 清除超时定时器
+                console.error('Claude API错误:', error);
+                var errorResult = '❌ 代码分析失败\n\n';
+                errorResult += '错误信息: ' + error.message + '\n\n';
+                
+                if (error.message.includes('Failed to fetch')) {
+                    errorResult += '网络连接问题：\n';
+                    errorResult += '• 检查网络连接\n';
+                    errorResult += '• 确认API服务可访问\n';
+                    errorResult += '• 检查防火墙设置\n';
+                } else if (error.message.includes('401')) {
+                    errorResult += 'API认证问题：\n';
+                    errorResult += '• 检查API密钥是否正确\n';
+                    errorResult += '• 确认API密钥权限\n';
+                } else if (error.message.includes('429')) {
+                    errorResult += 'API限流问题：\n';
+                    errorResult += '• 请求过于频繁\n';
+                    errorResult += '• 请稍后重试\n';
+                } else {
+                    errorResult += '其他问题：\n';
+                    errorResult += '• 稍后重试\n';
+                    errorResult += '• 检查API配置\n';
+                }
+                
+                errorResult += '\n<button onclick="runCodeAnalysis()" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄 重试分析</button>';
+                showResult(resultElementId, errorResult);
+            });
+        }
+
+        // 文件操作演示
+        function runFileOperation() {
+            if (!apiConfigured) {
+                showResult('file-result', '请先配置API密钥');
+                return;
+            }
+
+            showResult('file-result', '<div class="loading"></div>正在生成代码...');
+
+            var prompt = '请帮我创建一个简单的JavaScript工具函数，用于验证邮箱地址格式。要求包含完整的函数实现和使用示例。';
+            makeClaudeRequest(prompt, 'file-result');
+        }
+
+        // 流式响应演示
+        function runStreamingQuery() {
+            if (!apiConfigured) {
+                showResult('streaming-result', '请先配置API密钥');
+                return;
+            }
+
+            showResult('streaming-result', '<div class="loading"></div>正在建立流式连接...');
+
+            // 构建SSE URL，将参数作为查询字符串传递
+            var streamingUrl = '/api/streaming-query?apiKey=' + encodeURIComponent(currentApiKey) + 
+                              '&baseUrl=' + encodeURIComponent(currentBaseUrl) + 
+                              '&prompt=' + encodeURIComponent('请为我生成一份关于人工智能在软件开发中应用的详细报告，包括现状分析、技术优势、挑战与机遇、未来发展趋势等内容。报告应该结构清晰，内容丰富。');
+
+            var resultContent = '';
+            var eventSource = new EventSource(streamingUrl);
+            
+            showResult('streaming-result', '🌊 正在接收流式响应...\n\n');
+
+            eventSource.onmessage = function(event) {
+                console.log('收到SSE数据:', event.data);
+                
+                // 跳过空数据或注释
+                if (!event.data || event.data.trim() === '' || event.data.startsWith(':')) {
+                    return;
+                }
+                
+                try {
+                    // 移除"data: "前缀
+                    var rawData = event.data;
+                    if (rawData.startsWith('data: ')) {
+                        rawData = rawData.substring(6);
+                    }
+                    
+                    // 如果数据为空，跳过
+                    if (!rawData || rawData.trim() === '') {
+                        return;
+                    }
+                    
+                    console.log('处理后的原始数据:', rawData);
+                    var parsed = JSON.parse(rawData);
+                    console.log('解析后的数据:', parsed);
+                    
+                    // 处理连接确认事件
+                    if (parsed.type === 'connected') {
+                        console.log('流式连接已建立');
+                        return;
+                    }
+                    
+                    // 处理心跳包
+                    if (parsed.type === 'heartbeat') {
+                        console.log('收到心跳包:', parsed.timestamp);
+                        return;
+                    }
+                    
+                    // 处理完成事件
+                    if (parsed.type === 'complete') {
+                        showResult('streaming-result', resultContent + '\n\n✅ 流式响应完成！\n\n📊 统计信息:\n• 总字符数: ' + (parsed.totalLength || 0) + '\n• 消息数量: ' + (parsed.messageCount || 0));
+                        eventSource.close();
+                        return;
+                    }
+                    
+                    // 处理逐字符数据
+                    if (parsed.type === 'content' && parsed.content && parsed.content.trim() !== '') {
+                        console.log('收到内容数据:', parsed.content);
+                        resultContent += parsed.content;
+                        var progress = parsed.position && parsed.totalLength ? 
+                            ' (' + parsed.position + '/' + parsed.totalLength + ')' : '';
+                        showResult('streaming-result', '🌊 正在接收流式响应...' + progress + '\n\n' + resultContent + '▋');
+                        
+                        // 自动滚动到最新内容
+                        var streamingResultElement = document.getElementById('streaming-result');
+                        if (streamingResultElement) {
+                            streamingResultElement.scrollTop = streamingResultElement.scrollHeight;
+                        }
+                    } else {
+                        console.log('跳过非内容数据或空内容:', parsed);
+                    }
+                    
+                    // 处理错误事件
+                    if (parsed.type === 'error') {
+                        console.error('服务器流式响应错误:', parsed.error);
+                        showResult('streaming-result', '❌ 流式响应错误: ' + parsed.error);
+                        eventSource.close();
+                        return;
+                    }
+                } catch (e) {
+                    console.error('解析SSE数据错误:', e, '原始数据:', event.data);
+                    // 不要因为解析错误而关闭连接
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                console.error('流式响应错误:', error);
+                showResult('streaming-result', '❌ 流式响应失败\n\n请检查服务器连接或稍后重试。');
+                eventSource.close();
+            };
+
+            eventSource.onopen = function() {
+                console.log('SSE连接已建立');
+            };
+         }
+
+        // 高级配置演示
+        function runAdvancedQuery() {
+            if (!apiConfigured) {
+                showResult('advanced-result', '请先配置API密钥');
+                return;
+            }
+
+            showResult('advanced-result', '<div class="loading"></div>正在使用高级配置查询...');
+
+            // 使用本地服务器的高级配置API端点
+            var advancedUrl = '/api/advanced-query';
+            var requestData = {
+                apiKey: currentApiKey,
+                baseUrl: currentBaseUrl,
+                prompt: '分析当前项目的代码结构，并提供优化建议。请重点关注代码组织、性能优化和最佳实践。',
+                config: {
+                    model: 'claude-3-5-sonnet-20241022',
+                    maxTokens: 1500,
+                    timeout: 30000,
+                    allowedTools: ['Read', 'LS'],
+                    enableLogging: true,
+                    enableMessageListener: true,
+                    enableToolListener: true,
+                    temperature: 0.7
+                }
+            };
+
+            var startTime = Date.now();
+            var messageCount = 0;
+            var toolUsageCount = 0;
+
+            fetch(advancedUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('高级配置请求失败: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                var endTime = Date.now();
+                var duration = endTime - startTime;
+
+                var result = '⚡ 高级配置演示结果\n';
+                result += '=' .repeat(50) + '\n\n';
+                
+                result += '📊 配置信息:\n';
+                result += '• 模型: ' + requestData.config.model + '\n';
+                result += '• 最大令牌数: ' + requestData.config.maxTokens + '\n';
+                result += '• 超时设置: ' + requestData.config.timeout + 'ms\n';
+                result += '• 允许工具: ' + requestData.config.allowedTools.join(', ') + '\n';
+                result += '• 温度参数: ' + requestData.config.temperature + '\n\n';
+                
+                result += '⏱️ 执行统计:\n';
+                result += '• 响应时间: ' + duration + 'ms\n';
+                result += '• 消息监听: ' + (data.messageEvents ? data.messageEvents.length : 0) + ' 个事件\n';
+                result += '• 工具使用: ' + (data.toolEvents ? data.toolEvents.length : 0) + ' 次调用\n\n';
+                
+                if (data.messageEvents && data.messageEvents.length > 0) {
+                    result += '📝 消息事件日志:\n';
+                    for (var i = 0; i < Math.min(3, data.messageEvents.length); i++) {
+                        var event = data.messageEvents[i];
+                        result += '• [' + event.timestamp + '] ' + event.type + ': ' + event.message.substring(0, 100) + '...\n';
+                    }
+                    result += '\n';
+                }
+                
+                if (data.toolEvents && data.toolEvents.length > 0) {
+                    result += '🔧 工具使用日志:\n';
+                    for (var i = 0; i < Math.min(3, data.toolEvents.length); i++) {
+                        var event = data.toolEvents[i];
+                        result += '• [' + event.timestamp + '] 工具: ' + event.toolName + ' - ' + event.description + '\n';
+                    }
+                    result += '\n';
+                }
+                
+                result += '🤖 Claude 响应:\n';
+                result += '-'.repeat(30) + '\n';
+                result += data.content || '未收到响应内容';
+                
+                showResult('advanced-result', result);
+            })
+            .catch(function(error) {
+                console.error('高级配置错误:', error);
+                var errorResult = '❌ 高级配置演示失败\n\n';
+                errorResult += '错误信息: ' + error.message + '\n\n';
+                errorResult += '📋 尝试的配置:\n';
+                errorResult += '• 模型: claude-3-5-sonnet-20241022\n';
+                errorResult += '• 超时: 30秒\n';
+                errorResult += '• 工具权限: Read, LS\n';
+                errorResult += '• 日志记录: 启用\n';
+                errorResult += '• 事件监听: 启用\n\n';
+                errorResult += '请检查服务器连接或稍后重试。';
+                showResult('advanced-result', errorResult);
+            });
+        }
+
+        // 通用Claude API请求函数
+        function makeClaudeRequest(prompt, resultElementId) {
+            var requestData = {
+                model: 'claude-3-haiku-20240307',
+                max_tokens: 1000,
+                messages: [{
+                    role: 'user',
+                    content: prompt
+                }]
+            };
+
+            fetch(currentBaseUrl + '/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': currentApiKey,
+                    'anthropic-version': '2023-06-01'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('API请求失败: ' + response.status + ' ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                console.log('Claude API响应:', data);
+                
+                if (data.content && data.content[0]) {
+                    var responseText = data.content[0].text;
+                    
+                    // 检查响应文本是否为空或只包含空白字符
+                    if (responseText && responseText.trim()) {
+                        showResult(resultElementId, responseText);
+                    } else {
+                        // 处理空响应的情况
+                        var emptyResponseMsg = '⚠️ Claude返回了空响应\n\n';
+                        emptyResponseMsg += '可能的原因:\n';
+                        emptyResponseMsg += '• 请求的内容过于简单或不明确\n';
+                        emptyResponseMsg += '• API配置问题\n';
+                        emptyResponseMsg += '• 网络连接问题\n\n';
+                        emptyResponseMsg += '建议尝试:\n';
+                        emptyResponseMsg += '• 重新提交请求\n';
+                        emptyResponseMsg += '• 检查API密钥配置\n';
+                        emptyResponseMsg += '• 使用更具体的代码分析请求';
+                        showResult(resultElementId, emptyResponseMsg);
+                    }
+                } else if (data.error) {
+                    // 处理API错误响应
+                    var errorMsg = '❌ Claude API错误: ' + (data.error.message || data.error.type || '未知错误');
+                    showResult(resultElementId, errorMsg);
+                } else {
+                    // 处理意外的响应格式
+                    var unexpectedMsg = '⚠️ 收到了意外的响应格式\n\n';
+                    unexpectedMsg += '响应详情: ' + JSON.stringify(data, null, 2);
+                    showResult(resultElementId, unexpectedMsg);
+                }
+            })
+            .catch(function(error) {
+                console.error('Claude API错误:', error);
+                showResult(resultElementId, '❌ 请求失败: ' + error.message + '\n\n请检查API密钥是否正确，或稍后重试。');
+            });
+        }
+
+        // 显示结果函数
+        function showResult(elementId, content) {
+            var element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = content;
+            }
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Claude Code SDK 真实演示页面已加载');
+            showResult('basic-result', '请先配置API密钥');
+            showResult('analysis-result', '请先配置API密钥');
+            showResult('file-result', '请先配置API密钥');
+            showResult('streaming-result', '请先配置API密钥');
+            showResult('advanced-result', '请先配置API密钥');
+        });
+    </script>
+</body>
+</html>
