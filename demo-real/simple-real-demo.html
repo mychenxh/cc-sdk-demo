@@ -341,6 +341,15 @@
                 <div class="demo-card">
                     <h3>🌊 流式响应</h3>
                     <p>体验Claude的流式响应功能，实时接收AI生成的长篇内容，如报告、文章等。</p>
+                    <div class="query-input-section">
+                        <label for="streamingQueryInput" style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">对话内容:</label>
+                        <textarea 
+                            id="streamingQueryInput" 
+                            placeholder="请输入您想要对话的内容..." 
+                            style="width: 100%; min-height: 80px; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; box-sizing: border-box; margin-bottom: 12px; transition: border-color 0.2s ease;"
+                            onfocus="this.style.borderColor='#007bff'" 
+                            onblur="this.style.borderColor='#e1e5e9'">请为我生成一份关于人工智能在软件开发中应用的详细报告，包括现状分析、技术优势、挑战与机遇、未来发展趋势等内容。报告应该结构清晰，内容丰富。</textarea>
+                    </div>
                     <button class="demo-button" onclick="runStreamingQuery()" disabled>运行流式查询</button>
                     <div class="result-area" id="streaming-result">请先配置API密钥</div>
                 </div>
@@ -654,11 +663,19 @@ function fibonacci(n) {
                 return;
             }
 
+            // 获取用户输入的对话内容
+            var queryInput = document.getElementById('streamingQueryInput');
+            var prompt = queryInput ? queryInput.value.trim() : '';
+            
+            // 如果用户没有输入内容，使用默认提示
+            if (!prompt) {
+                prompt = '请为我生成一份关于人工智能在软件开发中应用的详细报告，包括现状分析、技术优势、挑战与机遇、未来发展趋势等内容。报告应该结构清晰，内容丰富。';
+            }
+
             showResult('streaming-result', '<div class="loading"></div>正在建立流式连接...');
 
             // 使用POST请求避免URL长度限制
             var streamingUrl = '/api/streaming-query';
-            var prompt = '请为我生成一份关于人工智能在软件开发中应用的详细报告，包括现状分析、技术优势、挑战与机遇、未来发展趋势等内容。报告应该结构清晰，内容丰富。';
 
             // 使用fetch发送POST请求，然后处理SSE响应
             fetch(streamingUrl, {
@@ -923,6 +940,12 @@ function fibonacci(n) {
             showResult('file-result', '请先配置API密钥');
             showResult('streaming-result', '请先配置API密钥');
             showResult('advanced-result', '请先配置API密钥');
+            
+            // 设置流式查询输入框的默认内容
+            var streamingInput = document.getElementById('streamingQueryInput');
+            if (streamingInput) {
+                streamingInput.value = '请为我生成一份关于人工智能在软件开发中应用的详细报告，包括现状分析、技术优势、挑战与机遇、未来发展趋势等内容。报告应该结构清晰，内容丰富。';
+            }
         });
     </script>
 </body>
