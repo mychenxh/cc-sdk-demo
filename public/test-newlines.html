@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>换行符测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .test-area {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 10px 0;
+            min-height: 200px;
+            white-space: pre-wrap;
+            background: #f9f9f9;
+        }
+        .html-area {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 10px 0;
+            min-height: 200px;
+            background: #f9f9f9;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>换行符测试</h1>
+    
+    <button onclick="testRawText()">测试原始文本</button>
+    <button onclick="testHTMLText()">测试HTML转换</button>
+    <button onclick="testStreamingText()">测试流式文本</button>
+    
+    <h2>原始文本显示</h2>
+    <div id="raw-text" class="test-area"></div>
+    
+    <h2>HTML转换后显示</h2>
+    <div id="html-text" class="html-area"></div>
+    
+    <h2>流式文本显示</h2>
+    <div id="streaming-text" class="html-area"></div>
+
+    <script>
+        function testRawText() {
+            const testText = "第一行\n第二行\n第三行\n\n第四行（空行后）";
+            document.getElementById('raw-text').innerText = testText;
+            console.log('原始文本:', JSON.stringify(testText));
+        }
+        
+        function testHTMLText() {
+            const testText = "第一行\n第二行\n第三行\n\n第四行（空行后）";
+            const htmlText = testText.replace(/\n/g, '<br>');
+            document.getElementById('html-text').innerHTML = htmlText;
+            console.log('HTML转换后:', JSON.stringify(htmlText));
+        }
+        
+        function testStreamingText() {
+            const testText = "第一行\n第二行\n第三行\n\n第四行（空行后）";
+            const streamingElement = document.getElementById('streaming-text');
+            streamingElement.innerHTML = '';
+            
+            let currentText = '';
+            for (let i = 0; i < testText.length; i++) {
+                setTimeout(() => {
+                    currentText += testText[i];
+                    const htmlText = currentText.replace(/\n/g, '<br>');
+                    streamingElement.innerHTML = htmlText + '▋';
+                }, i * 100);
+            }
+        }
+    </script>
+</body>
+</html>

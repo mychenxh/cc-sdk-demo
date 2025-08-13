@@ -1,0 +1,1 @@
+web: cd demo-real && npm install && npm start

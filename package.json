@@ -27,7 +27,11 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "vercel-build": "npm run build && cp -r demo-real/*.html demo-real/*.js public/ || true",
+    "start": "node demo-real/server.js",
+    "railway:start": "cd demo-real && npm install && npm start",
+    "railway:dev": "cd demo-real && npm run dev"
   },
   "keywords": [
     "claude",

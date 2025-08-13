@@ -18,11 +18,6 @@ app.use(express.urlencoded({ extended: true }));
 // 静态文件服务 - 提供当前目录的文件
 app.use(express.static(__dirname));
 
-// 主页重定向到演示页面
-app.get('/', (req, res) => {
-    res.redirect(301, '/simple-real-demo.html');
-});
-
 // 健康检查端点
 app.get('/api/health', (req, res) => {
     res.json({ 

@@ -1,0 +1,25 @@
+{
+  "name": "claude-sdk-demo-server",
+  "version": "1.0.0",
+  "description": "Claude SDK流式响应演示服务器",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@instantlyeasy/claude-code-sdk-ts": "file:..",
+    "axios": "^1.11.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "keywords": [
+    "claude",
+    "sdk",
+    "streaming",
+    "demo"
+  ],
+  "author": "Claude SDK Team",
+  "license": "MIT"
+}
