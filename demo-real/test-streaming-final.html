@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流式响应测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        
+        .test-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .result-area {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            min-height: 200px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .result-area.streaming {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+        
+        /* 打字机光标效果 */
+        .typing-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.2em;
+            background-color: #0ea5e9;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .stats {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🌊 流式响应测试页面</h1>
+        <p>这个页面用于测试修复后的流式响应效果。</p>
+        
+        <button class="test-button" onclick="testStreaming()" id="testBtn">开始流式测试</button>
+        <button class="test-button" onclick="clearResult()" style="background: #6c757d;">清空结果</button>
+        
+        <div class="result-area" id="result">点击"开始流式测试"按钮来测试流式响应效果...</div>
+        
+        <div class="stats" id="stats" style="display: none;">
+            <strong>📊 流式统计信息：</strong>
+            <div id="statsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        function clearResult() {
+            document.getElementById('result').innerHTML = '点击"开始流式测试"按钮来测试流式响应效果...';
+            document.getElementById('result').classList.remove('streaming');
+            document.getElementById('stats').style.display = 'none';
+        }
+        
+        async function testStreaming() {
+            const btn = document.getElementById('testBtn');
+            const result = document.getElementById('result');
+            const stats = document.getElementById('stats');
+            const statsContent = document.getElementById('statsContent');
+            
+            btn.disabled = true;
+            btn.textContent = '测试中...';
+            
+            result.innerHTML = '🌊 正在连接服务器...\n\n';
+            result.classList.add('streaming');
+            stats.style.display = 'none';
+            
+            const startTime = Date.now();
+            let chunkCount = 0;
+            let totalContent = '';
+            let estimatedTotal = 800; // 基于历史数据的估算
+            
+            // 在文本框内显示累计字数/总字数的函数
+            function updateTextWithProgress() {
+                const progressText = `📊 ${totalContent.length}/${estimatedTotal} 字符 (${Math.round((totalContent.length / estimatedTotal) * 100)}%)`;
+                const displayContent = '🌊 正在连接服务器... | ' + progressText + '\n\n' + totalContent;
+                result.innerHTML = displayContent.replace(/\n/g, '<br>');
+                result.scrollTop = result.scrollHeight;
+            }
+            
+            try {
+                const response = await fetch('/api/streaming-query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: '请简单介绍一下人工智能在现代社会中的应用领域，包括教育、医疗、金融等方面的具体案例。',
+                        allowedTools: ['Read'],
+                        permissionMode: 'auto',
+                        useFluent: true
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`请求失败: ${response.status}`);
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        const endTime = Date.now();
+                        const duration = endTime - startTime;
+                        const avgSpeed = Math.round(totalContent.length / (duration / 1000));
+                        
+                        // 更新估算的总字数
+                        estimatedTotal = totalContent.length;
+                        
+                        // 显示最终结果（移除光标）
+                        const finalProgressText = `📊 ${totalContent.length}/${totalContent.length} 字符 (100%)`;
+                        const finalContent = '🌊 正在连接服务器... | ' + finalProgressText + '\n\n' + totalContent + '\n\n✅ 流式响应完成！';
+                        result.innerHTML = finalContent.replace(/\n/g, '<br>');
+                        result.classList.remove('streaming');
+                        
+                        // 显示统计信息
+                        statsContent.innerHTML = `
+                            • 总耗时: ${duration}ms<br>
+                            • 总字符数: ${totalContent.length}<br>
+                            • 数据块数: ${chunkCount}<br>
+                            • 平均速度: ${avgSpeed} 字符/秒
+                        `;
+                        stats.style.display = 'block';
+                        
+                        break;
+                    }
+                    
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const dataStr = line.substring(6);
+                                if (dataStr && dataStr.trim() !== '') {
+                                    const parsed = JSON.parse(dataStr);
+                                    
+                                    if (parsed.type === 'content' && parsed.content) {
+                                        totalContent += parsed.content;
+                                        chunkCount++;
+                                        
+                                        // 实时显示（带光标和进度）
+                                        updateTextWithProgress();
+                                    }
+                                }
+                            } catch (e) {
+                                // 忽略解析错误
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                result.innerHTML = `❌ 测试失败: ${error.message}`;
+                result.classList.remove('streaming');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '开始流式测试';
+            }
+        }
+    </script>
+</body>
+</html>

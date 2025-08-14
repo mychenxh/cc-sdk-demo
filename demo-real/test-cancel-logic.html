@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>取消按钮逻辑测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .result { border: 1px solid #ccc; height: 150px; overflow-y: auto; padding: 10px; margin: 10px 0; font-family: monospace; }
+        .btn-container { margin: 10px 0; }
+        button { padding: 8px 16px; margin: 0 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .start-btn { background: #007bff; color: white; }
+        .cancel-btn { background: #dc3545; color: white; }
+        .cancel-btn:disabled { background: #6c757d; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>取消按钮逻辑测试</h1>
+    <div class="btn-container">
+        <button class="start-btn" onclick="startTest()">开始测试</button>
+        <button class="cancel-btn" id="cancelBtn" onclick="cancelTest()" disabled>取消</button>
+    </div>
+    <div class="result" id="result">等待开始测试...</div>
+
+    <script>
+        let isStreamingActive = false;
+        let timer = null;
+        let content = '';
+        let charIndex = 0;
+
+        function updateButtons() {
+            const cancelBtn = document.getElementById('cancelBtn');
+            cancelBtn.disabled = !isStreamingActive;
+            console.log('按钮状态更新 - isStreamingActive:', isStreamingActive, '按钮状态:', cancelBtn.disabled ? '禁用' : '启用');
+        }
+
+        function startTest() {
+            isStreamingActive = true;
+            content = '这是一个测试，模拟真实的流式响应过程。\n';
+            charIndex = 0;
+            
+            updateButtons();
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = '开始流式响应...\n';
+            
+            simulateStreaming();
+        }
+
+        function simulateStreaming() {
+            const testText = '每一行都会逐步显示，但取消按钮应该在整个过程中保持启用状态，直到我们明确调用停止。\n' +
+                            '这是第二行内容。\n' +
+                            '这是第三行内容。\n' +
+                            '这是最后一行内容。\n';
+            
+            function addNextChar() {
+                if (!isStreamingActive) {
+                    console.log('流式已停止，停止字符添加');
+                    return;
+                }
+                
+                if (charIndex < testText.length) {
+                    content += testText[charIndex];
+                    charIndex++;
+                    
+                    const resultDiv = document.getElementById('result');
+                    resultDiv.textContent = content + '[流式响应进行中...]';
+                    
+                    timer = setTimeout(addNextChar, 50);
+                } else {
+                    // 字符显示完成，但保持流式状态
+                    console.log('字符显示完成，保持流式状态');
+                    const resultDiv = document.getElementById('result');
+                    resultDiv.textContent = content + '[等待更多内容...]\n取消按钮应该仍然可见！';
+                    
+                    // 继续定时器，等待可能的更多内容
+                    timer = setTimeout(addNextChar, 100);
+                }
+            }
+            
+            addNextChar();
+        }
+
+        function cancelTest() {
+            console.log('取消测试被调用');
+            isStreamingActive = false;
+            
+            if (timer) {
+                clearTimeout(timer);
+                timer = null;
+            }
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = content + '\n\n❌ 流式响应已取消';
+            
+            updateButtons();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时流式换行符测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .result-area {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            min-height: 200px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .debug-info {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .raw-data {
+            background: #f1f3f4;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h2>实时流式换行符测试</h2>
+        <button class="button" onclick="testRealStreaming()">测试真实流式响应</button>
+        <button class="button" onclick="clearResults()">清除结果</button>
+        
+        <h3>流式显示结果：</h3>
+        <div id="streaming-result" class="result-area"></div>
+        
+        <h3>调试信息：</h3>
+        <div id="debug-info" class="debug-info"></div>
+        
+        <h3>原始数据：</h3>
+        <div id="raw-data" class="raw-data"></div>
+    </div>
+
+    <script>
+        function clearResults() {
+            document.getElementById('streaming-result').innerHTML = '';
+            document.getElementById('debug-info').innerHTML = '';
+            document.getElementById('raw-data').innerHTML = '';
+        }
+
+        function testRealStreaming() {
+            clearResults();
+            
+            const debugInfo = document.getElementById('debug-info');
+            const rawData = document.getElementById('raw-data');
+            const streamingResult = document.getElementById('streaming-result');
+            
+            debugInfo.innerHTML += '🚀 开始测试真实流式响应...\n';
+            
+            const prompt = `请生成一个包含多行文本的示例，包含：
+1. 第一行标题
+2. 第二行内容
+3. 空行
+4. 第三行更多内容
+5. 第四行结束
+
+请确保包含换行符。`;
+            
+            const streamingUrl = '/api/streaming-query';
+            
+            fetch(streamingUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    allowedTools: ['Read', 'Write', 'LS', 'Bash'],
+                    permissionMode: 'auto'
+                })
+            })
+            .then(function(response) {
+                debugInfo.innerHTML += '✅ 连接建立成功\n';
+                
+                if (!response.ok) {
+                    throw new Error('流式请求失败: ' + response.status);
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let resultContent = '';
+                let receivedChunks = [];
+                
+                streamingResult.innerHTML = '🌊 正在接收流式响应...<br><br>';
+                
+                function readStream() {
+                    return reader.read().then(function(result) {
+                        if (result.done) {
+                            debugInfo.innerHTML += '✅ 流式接收完成\n';
+                            const finalContent = resultContent + '<br><br>✅ 流式响应完成！';
+                            streamingResult.innerHTML = finalContent;
+                            return;
+                        }
+                        
+                        const chunk = decoder.decode(result.value, { stream: true });
+                        receivedChunks.push(chunk);
+                        
+                        // 显示原始数据
+                        rawData.innerHTML += '收到chunk: ' + JSON.stringify(chunk) + '\n';
+                        
+                        const lines = chunk.split('\n');
+                        
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const dataStr = line.substring(6);
+                                    if (dataStr && dataStr.trim() !== '') {
+                                        const parsed = JSON.parse(dataStr);
+                                        
+                                        // 记录收到的数据
+                                        debugInfo.innerHTML += `收到数据: type=${parsed.type}, content=${JSON.stringify(parsed.content || '')}\n`;
+                                        
+                                        if (parsed.type === 'content' && parsed.content !== undefined && parsed.content !== null) {
+                                            const char = parsed.content;
+                                            resultContent += char;
+                                            
+                                            // 详细记录换行符处理
+                                            if (char === '\n') {
+                                                debugInfo.innerHTML += '🔄 收到换行符，当前resultContent: ' + JSON.stringify(resultContent) + '\n';
+                                            }
+                                            
+                                            // 每次都重新格式化整个内容
+                                            const formattedContent = '🌊 正在接收流式响应...<br><br>' + resultContent + '▋';
+                                            const htmlContent = formattedContent.replace(/\n/g, '<br>');
+                                            
+                                            streamingResult.innerHTML = htmlContent;
+                                            
+                                            // 自动滚动
+                                            streamingResult.scrollTop = streamingResult.scrollHeight;
+                                        }
+                                    }
+                                } catch (e) {
+                                    debugInfo.innerHTML += '❌ 解析SSE数据错误: ' + e.message + ', 原始数据: ' + JSON.stringify(line) + '\n';
+                                }
+                            }
+                        }
+                        
+                        return readStream();
+                    });
+                }
+                
+                return readStream();
+            })
+            .catch(function(error) {
+                debugInfo.innerHTML += '❌ 流式响应错误: ' + error.message + '\n';
+                streamingResult.innerHTML = '❌ 流式响应失败: ' + error.message;
+            });
+        }
+    </script>
+</body>
+</html>

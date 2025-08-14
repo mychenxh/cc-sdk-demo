@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo "🔧 开始 Claude CLI 自动认证..."
+echo "🔧 开始 Claude CLI 自动认证......"
 
 # 检查是否在 Railway 环境
 if [ -z "$RAILWAY_ENVIRONMENT" ]; then

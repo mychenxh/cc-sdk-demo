@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流式功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        
+        .test-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .result-area {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            min-height: 200px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .result-area.streaming {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+        
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌊 流式功能测试页面</h1>
+    
+    <div class="status info">
+        <strong>测试说明：</strong>
+        <ul>
+            <li>测试流式响应的实时显示效果</li>
+            <li>验证修复后的流式体验优化</li>
+            <li>检查打字机效果和视觉反馈</li>
+        </ul>
+    </div>
+    
+    <button class="test-button" onclick="testStreaming()">测试流式响应</button>
+    <button class="test-button" onclick="testMockStreaming()">测试模拟流式</button>
+    <button class="test-button" onclick="clearResult()">清空结果</button>
+    
+    <div class="result-area" id="test-result">点击上方按钮开始测试...</div>
+    
+    <script>
+        function clearResult() {
+            document.getElementById('test-result').textContent = '点击上方按钮开始测试...';
+        }
+        
+        function testStreaming() {
+            const resultElement = document.getElementById('test-result');
+            resultElement.textContent = '正在测试真实流式响应...\n\n';
+            resultElement.classList.add('streaming');
+            
+            const startTime = Date.now();
+            
+            fetch('/api/streaming-query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    prompt: '请简要介绍一下人工智能的发展历程，包括主要里程碑和未来趋势。',
+                    allowedTools: ['Read'],
+                    permissionMode: 'auto',
+                    useFluent: true
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('请求失败: ' + response.status);
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let content = '';
+                
+                function readStream() {
+                    return reader.read().then(result => {
+                        if (result.done) {
+                            const endTime = Date.now();
+                            const duration = endTime - startTime;
+                            
+                            resultElement.innerHTML = content.replace(/\n/g, '<br>') + `<br><br>✅ 流式响应完成！<br>📊 统计信息:<br>• 总耗时: ${duration}ms<br>• 字符数: ${content.length}<br>• 平均速度: ${Math.round(content.length / (duration / 1000))} 字符/秒`;
+                            resultElement.classList.remove('streaming');
+                            return;
+                        }
+                        
+                        const chunk = decoder.decode(result.value, { stream: true });
+                        const lines = chunk.split('\n');
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const dataStr = line.substring(6);
+                                    if (dataStr && dataStr.trim() !== '') {
+                                        const parsed = JSON.parse(dataStr);
+                                        
+                                        if (parsed.type === 'content' && parsed.content) {
+                                            content += parsed.content;
+                                            resultElement.innerHTML = content.replace(/\n/g, '<br>') + '<span class="typing-cursor"></span>';
+                                            resultElement.scrollTop = resultElement.scrollHeight;
+                                        } else if (parsed.type === 'error') {
+                                            throw new Error(parsed.error);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn('SSE解析错误:', e);
+                                }
+                            }
+                        }
+                        
+                        return readStream();
+                    });
+                }
+                
+                return readStream();
+            })
+            .catch(error => {
+                console.error('流式测试错误:', error);
+                resultElement.textContent = '❌ 测试失败: ' + error.message;
+                resultElement.classList.remove('streaming');
+            });
+        }
+        
+        function testMockStreaming() {
+            const resultElement = document.getElementById('test-result');
+            resultElement.textContent = '正在测试模拟流式响应...\n\n';
+            resultElement.classList.add('streaming');
+            
+            const mockContent = `这是一个模拟的流式响应测试，用于验证前端显示效果。
+
+🌊 测试内容：
+1. 实时显示效果
+2. 打字机光标动画
+3. 自动滚动功能
+4. 视觉反馈优化
+
+📝 技术特点：
+• 使用textContent而不是innerHTML
+• white-space: pre-wrap 保持格式
+• CSS动画效果
+• 流畅的滚动体验
+
+🚀 优化改进：
+• 减少DOM操作频率
+• 改进换行符处理
+• 添加视觉状态反馈
+• 优化性能表现
+
+✅ 模拟测试完成！`;
+
+            let index = 0;
+            const speed = 30; // 字符/秒
+            
+            function typeCharacter() {
+                if (index < mockContent.length) {
+                    resultElement.innerHTML = mockContent.substring(0, index + 1).replace(/\n/g, '<br>') + '<span class="typing-cursor"></span>';
+                    resultElement.scrollTop = resultElement.scrollHeight;
+                    index++;
+                    setTimeout(typeCharacter, 1000 / speed);
+                } else {
+                    resultElement.innerHTML = mockContent.replace(/\n/g, '<br>');
+                    resultElement.classList.remove('streaming');
+                }
+            }
+            
+            typeCharacter();
+        }
+    </script>
+</body>
+</html>

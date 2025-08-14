@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打字机效果测试</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #00ff00;
+        }
+        .terminal {
+            background-color: #000;
+            border: 2px solid #333;
+            padding: 20px;
+            min-height: 400px;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .start-btn {
+            background: #007bff;
+            color: white;
+        }
+        .cancel-btn {
+            background: #dc3545;
+            color: white;
+        }
+        .cancel-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 打字机效果测试</h1>
+    <div class="controls">
+        <button class="start-btn" onclick="startTypewriter()">开始打字机效果</button>
+        <button class="cancel-btn" id="cancelBtn" onclick="cancelTypewriter()" disabled>取消</button>
+    </div>
+    <div class="terminal" id="terminal">等待开始...</div>
+
+    <script>
+        let isTyping = false;
+        let typewriterTimer = null;
+        let currentText = '';
+        let currentIndex = 0;
+        let showCursor = true;
+
+        const terminal = document.getElementById('terminal');
+        const cancelBtn = document.getElementById('cancelBtn');
+
+        function updateButtons() {
+            cancelBtn.disabled = !isTyping;
+        }
+
+        function startTypewriter() {
+            isTyping = true;
+            currentText = '这是一个打字机效果测试！\n\n' +
+                         'Hello, World! 欢迎来到打字机效果演示。\n\n' +
+                         '这段文字将模拟真实的打字机效果，包括：\n' +
+                         '• 逐字显示\n' +
+                         '• 光标闪烁\n' +
+                         '• 平滑的滚动效果\n\n' +
+                         '让我们看看这个效果如何工作...\n\n' +
+                         '打字机效果完成！';
+            currentIndex = 0;
+            showCursor = true;
+            
+            updateButtons();
+            terminal.textContent = '';
+            
+            typeNextChar();
+        }
+
+        function typeNextChar() {
+            if (!isTyping) return;
+
+            if (currentIndex < currentText.length) {
+                // 显示当前字符
+                const displayText = currentText.substring(0, currentIndex + 1);
+                const cursor = showCursor ? '|' : ' ';
+                terminal.textContent = displayText + cursor;
+                
+                // 切换光标状态
+                showCursor = !showCursor;
+                currentIndex++;
+                
+                // 滚动到底部
+                terminal.scrollTop = terminal.scrollHeight;
+                
+                // 继续下一个字符
+                typewriterTimer = setTimeout(typeNextChar, 100);
+            } else {
+                // 打字完成，继续闪烁光标
+                const cursor = showCursor ? '|' : ' ';
+                terminal.textContent = currentText + cursor;
+                showCursor = !showCursor;
+                typewriterTimer = setTimeout(typeNextChar, 500);
+            }
+        }
+
+        function cancelTypewriter() {
+            isTyping = false;
+            if (typewriterTimer) {
+                clearTimeout(typewriterTimer);
+                typewriterTimer = null;
+            }
+            
+            const cursor = showCursor ? '|' : ' ';
+            terminal.textContent = currentText.substring(0, currentIndex) + '\n\n❌ 打字机效果已取消' + cursor;
+            
+            updateButtons();
+        }
+    </script>
+</body>
+</html>

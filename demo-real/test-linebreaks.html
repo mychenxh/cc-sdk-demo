@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>换行符测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .result-area {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            min-height: 200px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h2>换行符显示测试</h2>
+        <button class="button" onclick="testLineBreaks()">测试换行符显示</button>
+        <button class="button" onclick="testStreaming()">测试流式显示</button>
+        <div id="test-result" class="result-area"></div>
+    </div>
+
+    <script>
+        function testLineBreaks() {
+            const testText = "第一行文本\n第二行文本\n\n第三行文本（前面有空行）\n第四行文本";
+            document.getElementById('test-result').innerHTML = testText.replace(/\n/g, '<br>');
+        }
+
+        function testStreaming() {
+            const resultDiv = document.getElementById('test-result');
+            resultDiv.innerHTML = '';
+            
+            const testContent = "这是第一行\n这是第二行\n\n这是第三行（前面有空行）\n这是第四行\n这是最后一行";
+            let currentContent = '';
+            
+            let index = 0;
+            const interval = setInterval(() => {
+                if (index < testContent.length) {
+                    currentContent += testContent[index];
+                    
+                    // 修复后的换行符处理
+                    const formattedContent = '流式显示中...\n\n' + currentContent + '▋';
+                    const htmlContent = formattedContent.replace(/\n/g, '<br>');
+                    resultDiv.innerHTML = htmlContent;
+                    
+                    index++;
+                } else {
+                    clearInterval(interval);
+                    const finalContent = currentContent + '\n\n✅ 显示完成！';
+                    const finalHtmlContent = finalContent.replace(/\n/g, '<br>');
+                    resultDiv.innerHTML = finalHtmlContent;
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>

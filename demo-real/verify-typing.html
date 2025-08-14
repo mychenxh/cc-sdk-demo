@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打字机效果验证</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .test-area {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            min-height: 200px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .test-area.streaming {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+        
+        /* 打字机光标效果 */
+        .typing-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.2em;
+            background-color: #0ea5e9;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 打字机效果验证</h1>
+    
+    <button class="test-button" onclick="testTypingEffect()">测试打字机效果</button>
+    <button class="test-button" onclick="clearResult()">清空</button>
+    
+    <div class="test-area" id="test-result">点击按钮开始测试...</div>
+    
+    <script>
+        function clearResult() {
+            document.getElementById('test-result').innerHTML = '点击按钮开始测试...';
+        }
+        
+        function testTypingEffect() {
+            const resultElement = document.getElementById('test-result');
+            resultElement.innerHTML = '开始测试打字机效果...<br><br>';
+            resultElement.classList.add('streaming');
+            
+            const testText = `这是一个打字机效果的测试。
+
+验证内容包括：
+1. 光标闪烁动画
+2. 换行符正确处理
+3. 实时显示效果
+4. 完成时光标消失
+
+打字机效果应该能够提供良好的视觉反馈，让用户清楚地看到内容正在实时生成。
+
+✅ 测试完成！`;
+            
+            let index = 0;
+            const speed = 50; // 字符/秒
+            
+            function typeCharacter() {
+                if (index < testText.length) {
+                    // 显示当前内容 + 打字机光标
+                    const currentContent = testText.substring(0, index + 1);
+                    resultElement.innerHTML = currentContent.replace(/\n/g, '<br>') + '<span class="typing-cursor"></span>';
+                    resultElement.scrollTop = resultElement.scrollHeight;
+                    index++;
+                    setTimeout(typeCharacter, 1000 / speed);
+                } else {
+                    // 完成时移除光标
+                    resultElement.innerHTML = testText.replace(/\n/g, '<br>');
+                    resultElement.classList.remove('streaming');
+                }
+            }
+            
+            typeCharacter();
+        }
+    </script>
+</body>
+</html>

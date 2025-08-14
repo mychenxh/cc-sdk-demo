@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Streaming Performance Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            margin: 10px 0; 
+            height: 200px; 
+            overflow-y: auto; 
+            white-space: pre-wrap;
+            background: #f5f5f5;
+        }
+        button { 
+            padding: 10px 20px; 
+            margin: 5px; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+        }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .stats { margin: 10px 0; padding: 10px; background: #e9ecef; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Streaming Performance Test</h1>
+    
+    <div>
+        <button onclick="testRegularStreaming()" id="regularBtn">Test Regular Streaming</button>
+        <button onclick="testFastStreaming()" id="fastBtn">Test Fast Streaming</button>
+        <button onclick="clearResults()" style="background: #dc3545;">Clear Results</button>
+    </div>
+    
+    <div class="stats" id="stats">Click a button to test streaming performance...</div>
+    
+    <div class="result" id="regularResult">Regular streaming results will appear here...</div>
+    <div class="result" id="fastResult">Fast streaming results will appear here...</div>
+
+    <script>
+        async function testRegularStreaming() {
+            const btn = document.getElementById('regularBtn');
+            const result = document.getElementById('regularResult');
+            const stats = document.getElementById('stats');
+            
+            btn.disabled = true;
+            result.textContent = '';
+            stats.textContent = 'Testing regular streaming...';
+            
+            const startTime = Date.now();
+            let firstChunkTime = null;
+            let totalChars = 0;
+            let chunkCount = 0;
+            
+            try {
+                const response = await fetch('/api/streaming-query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: '请简单介绍一下人工智能的应用领域',
+                        allowedTools: ['Read', 'Write', 'LS', 'Bash'],
+                        permissionMode: 'auto'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                if (data.type === 'content' && data.content) {
+                                    if (!firstChunkTime) {
+                                        firstChunkTime = Date.now();
+                                    }
+                                    totalChars += data.content.length;
+                                    chunkCount++;
+                                    result.textContent += data.content;
+                                    result.scrollTop = result.scrollHeight;
+                                }
+                            } catch (e) {
+                                // Ignore parsing errors
+                            }
+                        }
+                    }
+                }
+
+                const endTime = Date.now();
+                const totalTime = endTime - startTime;
+                const streamingTime = endTime - firstChunkTime;
+
+                stats.innerHTML = `
+                    <strong>Regular Streaming Results:</strong><br>
+                    Total time: ${totalTime}ms<br>
+                    Time to first chunk: ${firstChunkTime ? firstChunkTime - startTime : 0}ms<br>
+                    Streaming time: ${streamingTime}ms<br>
+                    Total characters: ${totalChars}<br>
+                    Number of chunks: ${chunkCount}<br>
+                    Average speed: ${Math.round(totalChars / (totalTime / 1000))} chars/sec<br>
+                    Average chunk size: ${Math.round(totalChars / chunkCount)} chars
+                `;
+
+            } catch (error) {
+                stats.textContent = `Error: ${error.message}`;
+                result.textContent = `Error: ${error.message}`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function testFastStreaming() {
+            const btn = document.getElementById('fastBtn');
+            const result = document.getElementById('fastResult');
+            const stats = document.getElementById('stats');
+            
+            btn.disabled = true;
+            result.textContent = '';
+            stats.textContent = 'Testing fast streaming...';
+            
+            const startTime = Date.now();
+            let firstChunkTime = null;
+            let totalChars = 0;
+            let chunkCount = 0;
+            
+            try {
+                const response = await fetch('/api/streaming-query-fast', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: '请简单介绍一下人工智能的应用领域',
+                        allowedTools: ['Read', 'Write', 'LS', 'Bash'],
+                        permissionMode: 'auto',
+                        fastMode: true
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                if (data.type === 'content' && data.content) {
+                                    if (!firstChunkTime) {
+                                        firstChunkTime = Date.now();
+                                    }
+                                    totalChars += data.content.length;
+                                    chunkCount++;
+                                    result.textContent += data.content;
+                                    result.scrollTop = result.scrollHeight;
+                                }
+                            } catch (e) {
+                                // Ignore parsing errors
+                            }
+                        }
+                    }
+                }
+
+                const endTime = Date.now();
+                const totalTime = endTime - startTime;
+                const streamingTime = endTime - firstChunkTime;
+
+                stats.innerHTML = `
+                    <strong>Fast Streaming Results:</strong><br>
+                    Total time: ${totalTime}ms<br>
+                    Time to first chunk: ${firstChunkTime ? firstChunkTime - startTime : 0}ms<br>
+                    Streaming time: ${streamingTime}ms<br>
+                    Total characters: ${totalChars}<br>
+                    Number of chunks: ${chunkCount}<br>
+                    Average speed: ${Math.round(totalChars / (totalTime / 1000))} chars/sec<br>
+                    Average chunk size: ${Math.round(totalChars / chunkCount)} chars
+                `;
+
+            } catch (error) {
+                stats.textContent = `Error: ${error.message}`;
+                result.textContent = `Error: ${error.message}`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('regularResult').textContent = 'Regular streaming results will appear here...';
+            document.getElementById('fastResult').textContent = 'Fast streaming results will appear here...';
+            document.getElementById('stats').textContent = 'Click a button to test streaming performance...';
+        }
+    </script>
+</body>
+</html>

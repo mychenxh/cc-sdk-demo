@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试取消按钮修复</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result-area {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .button-container {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .start-btn {
+            background: #007bff;
+            color: white;
+        }
+        .cancel-btn {
+            background: #dc3545;
+            color: white;
+        }
+        .cancel-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>测试取消按钮修复</h1>
+    <div class="button-container">
+        <button class="start-btn" onclick="startStreaming()">开始流式响应</button>
+        <button class="cancel-btn" id="cancelBtn" onclick="cancelStreaming()" disabled>取消</button>
+    </div>
+    <div class="result-area" id="resultArea">等待开始...</div>
+
+    <script>
+        let isStreamingActive = false;
+        let streamingTimer = null;
+        let streamingContent = '';
+        let currentIndex = 0;
+
+        function updateButtons() {
+            const cancelBtn = document.getElementById('cancelBtn');
+            cancelBtn.disabled = !isStreamingActive;
+        }
+
+        function ensureStreamingState() {
+            if (isStreamingActive) {
+                updateButtons();
+                setTimeout(ensureStreamingState, 100);
+            }
+        }
+
+        function startStreaming() {
+            isStreamingActive = true;
+            streamingContent = '这是一个模拟的流式响应，用于测试取消按钮是否在整个过程中保持显示。每一行都会逐步显示，模拟真实的流式响应效果。\n\n';
+            currentIndex = 0;
+            
+            updateButtons();
+            ensureStreamingState();
+            
+            simulateStreaming();
+        }
+
+        function simulateStreaming() {
+            if (!isStreamingActive) return;
+            
+            const lines = [
+                '正在接收第一行内容...\n',
+                '正在接收第二行内容...\n', 
+                '正在接收第三行内容...\n',
+                '正在接收第四行内容...\n',
+                '正在接收第五行内容...\n',
+                '正在接收第六行内容...\n',
+                '流式响应接近完成...\n',
+                '最后一行内容...\n'
+            ];
+            
+            function addNextLine() {
+                if (!isStreamingActive || currentIndex >= lines.length) {
+                    if (isStreamingActive) {
+                        // 模拟流式响应完成但保持定时器运行
+                        streamingTimer = setTimeout(addNextLine, 100);
+                    }
+                    return;
+                }
+                
+                streamingContent += lines[currentIndex];
+                currentIndex++;
+                
+                const resultArea = document.getElementById('resultArea');
+                resultArea.textContent = streamingContent + '\n\n[流式响应进行中...]';
+                
+                // 继续下一行
+                streamingTimer = setTimeout(addNextLine, 500);
+            }
+            
+            addNextLine();
+        }
+
+        function cancelStreaming() {
+            isStreamingActive = false;
+            if (streamingTimer) {
+                clearTimeout(streamingTimer);
+                streamingTimer = null;
+            }
+            
+            const resultArea = document.getElementById('resultArea');
+            resultArea.textContent = streamingContent + '\n\n❌ 流式响应已取消';
+            
+            updateButtons();
+        }
+    </script>
+</body>
+</html>

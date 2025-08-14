@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流式换行符测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .result {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+            min-height: 200px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h2>流式换行符测试</h2>
+    <button onclick="testStreaming()">开始流式测试</button>
+    <div id="result" class="result"></div>
+
+    <script>
+        function testStreaming() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '';
+            
+            const testContent = "这是第一行\n这是第二行\n\n这是第三行（前面有空行）\n这是第四行";
+            let resultContent = '';
+            
+            // 模拟流式接收
+            let index = 0;
+            const interval = setInterval(() => {
+                if (index < testContent.length) {
+                    resultContent += testContent[index];
+                    
+                    // 关键：每次都要重新处理整个内容
+                    const formattedContent = '🌊 正在接收流式响应...\n\n' + resultContent + '▋';
+                    const htmlContent = formattedContent.replace(/\n/g, '<br>');
+                    resultDiv.innerHTML = htmlContent;
+                    
+                    index++;
+                } else {
+                    clearInterval(interval);
+                    const finalContent = resultContent + '\n\n✅ 流式响应完成！';
+                    const finalHtmlContent = finalContent.replace(/\n/g, '<br>');
+                    resultDiv.innerHTML = finalHtmlContent;
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>
