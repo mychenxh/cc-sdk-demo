@@ -87,4 +87,63 @@ else
     echo "或者手动在 Railway 终端运行: claude login"
 fi
 
+# 执行外部 Claude Code 生产脚本
+echo "🚀 执行 Claude Code 生产脚本..."
+if [ -f "./claude_code_prod.sh" ]; then
+    echo "📝 发现生产脚本，开始执行..."
+    
+    # 创建执行日志文件
+    LOG_FILE="/tmp/claude_code_prod_execution.log"
+    
+    # 记录执行开始时间
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行 Claude Code 生产脚本" > "$LOG_FILE"
+    
+    # 执行脚本并记录输出
+    if ./claude_code_prod.sh >> "$LOG_FILE" 2>&1; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Claude Code 生产脚本执行成功" >> "$LOG_FILE"
+        echo "✅ Claude Code 生产脚本执行成功"
+        
+        # 显示脚本执行的关键信息
+        if [ -f "$LOG_FILE" ]; then
+            echo "📋 执行摘要:"
+            echo "   开始时间: $(head -1 "$LOG_FILE" | cut -d'[' -f2 | cut -d']' -f1)"
+            echo "   结束时间: $(tail -1 "$LOG_FILE" | cut -d'[' -f2 | cut -d']' -f1)"
+            echo "   日志文件: $LOG_FILE"
+            
+            # 检查脚本是否修改了CLI配置
+            if grep -i "claude\|auth\|login" "$LOG_FILE" > /dev/null; then
+                echo "🔍 检测到脚本可能修改了CLI配置，重新验证认证状态..."
+                sleep 2
+                if claude auth status &> /dev/null 2>&1; then
+                    echo "🎉 脚本执行后 Claude CLI 已认证！"
+                else
+                    echo "⚠️  脚本执行后仍需要认证"
+                fi
+            fi
+        fi
+    else
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Claude Code 生产脚本执行失败" >> "$LOG_FILE"
+        echo "❌ Claude Code 生产脚本执行失败"
+        
+        # 显示错误信息
+        if [ -f "$LOG_FILE" ]; then
+            echo "📋 错误详情:"
+            tail -10 "$LOG_FILE"
+            echo "🔍 完整日志: $LOG_FILE"
+        fi
+    fi
+    
+    # 显示脚本执行结果（最后20行）
+    if [ -f "$LOG_FILE" ]; then
+        echo ""
+        echo "📊 脚本执行结果 (最后20行):"
+        echo "================================"
+        tail -20 "$LOG_FILE"
+        echo "================================"
+    fi
+else
+    echo "⚠️  未找到 Claude Code 生产脚本，跳过执行"
+    echo "💡 如果需要执行生产脚本，请确保文件存在于: ./claude_code_prod.sh"
+fi
+
 echo "🔧 Claude CLI 认证脚本完成"

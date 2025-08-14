@@ -625,6 +625,169 @@ app.post('/api/advanced-query', async (req, res) => {
     }
 });
 
+// 脚本执行状态检查端点
+app.get('/api/script-execution-status', async (req, res) => {
+    try {
+        console.log('🔍 检查 Claude Code 生产脚本执行状态...');
+        
+        const { execa } = await import('execa');
+        const fs = await import('fs');
+        const path = await import('path');
+        
+        // 设置环境变量
+        process.env.PATH = `${process.env.PATH}:/usr/local/bin:/opt/nodejs/bin:$(npm config get prefix)/bin`;
+        
+        const status = {
+            script_file: {
+                exists: false,
+                executable: false,
+                size: 0,
+                modified_time: null,
+                permissions: null
+            },
+            execution_log: {
+                exists: false,
+                start_time: null,
+                end_time: null,
+                success: false,
+                error: null,
+                last_lines: []
+            },
+            script_content: {
+                preview_lines: [],
+                total_lines: 0,
+                script_type: 'unknown',
+                has_network_commands: false,
+                has_node_commands: false,
+                has_claude_commands: false
+            },
+            claude_cli: {
+                installed: false,
+                version: null,
+                authenticated: false
+            },
+            timestamp: new Date().toISOString()
+        };
+        
+        // 检查脚本文件
+        const scriptPath = path.join(__dirname, 'claude_code_prod.sh');
+        try {
+            const stats = await fs.promises.stat(scriptPath);
+            status.script_file.exists = true;
+            status.script_file.size = stats.size;
+            status.script_file.modified_time = stats.mtime.toISOString();
+            status.script_file.executable = (stats.mode & parseInt('111', 8)) !== 0;
+            
+            // 获取文件权限
+            const permissions = (stats.mode & parseInt('777', 8)).toString(8);
+            status.script_file.permissions = permissions;
+            
+            // 读取脚本内容预览
+            const content = await fs.promises.readFile(scriptPath, 'utf8');
+            const lines = content.split('\n');
+            status.script_content.total_lines = lines.length;
+            status.script_content.preview_lines = lines.slice(0, 20);
+            
+            // 分析脚本类型
+            if (lines.length > 0) {
+                const firstLine = lines[0];
+                if (firstLine.includes('bash')) {
+                    status.script_content.script_type = 'bash';
+                } else if (firstLine.includes('sh')) {
+                    status.script_content.script_type = 'shell';
+                }
+            }
+            
+            // 检查关键命令
+            status.script_content.has_network_commands = content.includes('curl') || content.includes('wget');
+            status.script_content.has_node_commands = content.includes('npm') || content.includes('node');
+            status.script_content.has_claude_commands = content.includes('claude');
+            
+        } catch (error) {
+            console.log('⚠️  脚本文件检查失败:', error.message);
+        }
+        
+        // 检查执行日志
+        const logPath = '/tmp/claude_code_prod_execution.log';
+        try {
+            const logStats = await fs.promises.stat(logPath);
+            status.execution_log.exists = true;
+            
+            const logContent = await fs.promises.readFile(logPath, 'utf8');
+            const logLines = logContent.split('\n').filter(line => line.trim());
+            
+            if (logLines.length > 0) {
+                // 提取开始和结束时间
+                const firstLine = logLines[0];
+                const lastLine = logLines[logLines.length - 1];
+                
+                const startMatch = firstLine.match(/\[(.*?)\]/);
+                const endMatch = lastLine.match(/\[(.*?)\]/);
+                
+                if (startMatch) status.execution_log.start_time = startMatch[1];
+                if (endMatch) status.execution_log.end_time = endMatch[1];
+                
+                // 检查执行结果
+                status.execution_log.success = logContent.includes('执行成功');
+                if (logContent.includes('执行失败')) {
+                    status.execution_log.success = false;
+                    status.execution_log.error = '脚本执行失败';
+                }
+                
+                // 获取最后几行
+                status.execution_log.last_lines = logLines.slice(-10);
+            }
+            
+        } catch (error) {
+            console.log('⚠️  执行日志检查失败:', error.message);
+        }
+        
+        // 检查 Claude CLI 状态
+        try {
+            const { stdout } = await execa('claude', ['--version'], { 
+                env: { ...process.env, PATH: process.env.PATH }
+            });
+            status.claude_cli.installed = true;
+            status.claude_cli.version = stdout.trim();
+            
+            try {
+                const { stdout: authStdout } = await execa('claude', ['auth', 'status'], { 
+                    env: { ...process.env, PATH: process.env.PATH }
+                });
+                status.claude_cli.authenticated = authStdout.includes('authenticated') || 
+                                             authStdout.includes('logged in') ||
+                                             authStdout.includes('Authorized');
+            } catch (authError) {
+                status.claude_cli.authenticated = false;
+            }
+        } catch (cliError) {
+            status.claude_cli.installed = false;
+        }
+        
+        console.log('✅ 脚本执行状态检查完成');
+        
+        res.json({
+            status: 'ok',
+            data: status,
+            summary: {
+                script_ready: status.script_file.exists && status.script_file.executable,
+                executed: status.execution_log.exists,
+                execution_success: status.execution_log.success,
+                claude_ready: status.claude_cli.installed && status.claude_cli.authenticated
+            },
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ 脚本执行状态检查失败:', error);
+        res.status(500).json({
+            status: 'error',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 // 404处理
 app.use((req, res) => {
     res.status(404).json({
