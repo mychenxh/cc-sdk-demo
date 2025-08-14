@@ -634,14 +634,75 @@ app.use((req, res) => {
     });
 });
 
+// 检查 Claude CLI 认证状态
+async function checkClaudeCLIAuth() {
+    try {
+        const { execa } = await import('execa');
+        
+        // 检查 CLI 是否安装
+        try {
+            const { stdout } = await execa('claude', ['--version']);
+            console.log('✅ Claude CLI 已安装:', stdout.trim());
+            
+            // 检查认证状态
+            try {
+                const { stdout: authStdout } = await execa('claude', ['auth', 'status']);
+                const isAuthenticated = authStdout.includes('authenticated') || 
+                                     authStdout.includes('logged in') ||
+                                     authStdout.includes('Authorized');
+                
+                if (isAuthenticated) {
+                    console.log('🔐 Claude CLI 已认证');
+                    return true;
+                } else {
+                    console.log('⚠️  Claude CLI 未认证');
+                    console.log('💡 解决方案:');
+                    console.log('   1. 在 Railway 环境变量中设置 CLAUDE_API_KEY');
+                    console.log('   2. 或在 Railway 终端运行: claude login');
+                    return false;
+                }
+            } catch (authError) {
+                console.log('⚠️  无法检查 Claude CLI 认证状态');
+                console.log('💡 请在 Railway 终端运行: claude login');
+                return false;
+            }
+        } catch (cliError) {
+            console.log('❌ Claude CLI 未安装');
+            console.log('💡 正在尝试安装...');
+            
+            try {
+                await execa('npm', ['install', '-g', '@anthropic-ai/claude-code']);
+                console.log('✅ Claude CLI 安装成功');
+                return false; // 安装成功但仍需认证
+            } catch (installError) {
+                console.log('❌ Claude CLI 安装失败');
+                return false;
+            }
+        }
+    } catch (error) {
+        console.log('❌ 检查 Claude CLI 认证状态时出错');
+        return false;
+    }
+}
+
 // 启动服务器
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
     console.log(`🚀 Claude SDK Demo Server 启动成功!`);
     
     if (isRailway) {
         console.log(`📱 Railway访问地址: https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'your-app.railway.app'}/`);
         console.log(`🔧 API健康检查: https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'your-app.railway.app'}/api/health`);
         console.log(`📝 流式响应演示: https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'your-app.railway.app'}/simple-real-demo.html`);
+        
+        // 在 Railway 环境中检查 Claude CLI 认证状态
+        console.log('🔍 检查 Claude CLI 认证状态...');
+        const isAuthenticated = await checkClaudeCLIAuth();
+        
+        if (!isAuthenticated) {
+            console.log('⚠️  Claude CLI 未认证，应用可能无法正常工作');
+            console.log('📝 请在 Railway 终端运行: claude login');
+            console.log('🔑 或在 Railway 环境变量中设置 CLAUDE_API_KEY');
+        }
     } else {
         console.log(`📱 本地访问地址: http://localhost:${PORT}`);
         console.log(`🔧 API健康检查: http://localhost:${PORT}/api/health`);
