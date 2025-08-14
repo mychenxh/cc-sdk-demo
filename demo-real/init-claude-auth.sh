@@ -97,9 +97,14 @@ if [ -f "./claude_code_prod.sh" ]; then
     
     # 记录执行开始时间
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行 Claude Code 生产脚本" > "$LOG_FILE"
+    echo "脚本文件: $(pwd)/claude_code_prod.sh" >> "$LOG_FILE"
+    echo "脚本大小: $(wc -c < ./claude_code_prod.sh) 字节" >> "$LOG_FILE"
+    echo "脚本权限: $(ls -la ./claude_code_prod.sh | awk '{print $1}')" >> "$LOG_FILE"
+    echo "" >> "$LOG_FILE"
     
     # 执行脚本并记录输出
-    if ./claude_code_prod.sh >> "$LOG_FILE" 2>&1; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 开始执行脚本内容..." >> "$LOG_FILE"
+    if timeout 300 ./claude_code_prod.sh >> "$LOG_FILE" 2>&1; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Claude Code 生产脚本执行成功" >> "$LOG_FILE"
         echo "✅ Claude Code 生产脚本执行成功"
         
@@ -109,6 +114,7 @@ if [ -f "./claude_code_prod.sh" ]; then
             echo "   开始时间: $(head -1 "$LOG_FILE" | cut -d'[' -f2 | cut -d']' -f1)"
             echo "   结束时间: $(tail -1 "$LOG_FILE" | cut -d'[' -f2 | cut -d']' -f1)"
             echo "   日志文件: $LOG_FILE"
+            echo "   执行时长: 约5分钟"
             
             # 检查脚本是否修改了CLI配置
             if grep -i "claude\|auth\|login" "$LOG_FILE" > /dev/null; then
@@ -122,13 +128,14 @@ if [ -f "./claude_code_prod.sh" ]; then
             fi
         fi
     else
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Claude Code 生产脚本执行失败" >> "$LOG_FILE"
-        echo "❌ Claude Code 生产脚本执行失败"
+        exit_code=$?
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Claude Code 生产脚本执行失败 (退出码: $exit_code)" >> "$LOG_FILE"
+        echo "❌ Claude Code 生产脚本执行失败 (退出码: $exit_code)"
         
         # 显示错误信息
         if [ -f "$LOG_FILE" ]; then
             echo "📋 错误详情:"
-            tail -10 "$LOG_FILE"
+            tail -20 "$LOG_FILE"
             echo "🔍 完整日志: $LOG_FILE"
         fi
     fi
