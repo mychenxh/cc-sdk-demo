@@ -10,19 +10,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3002;
 
-// Railway环境检测
-const isRailway = process.env.RAILWAY_ENVIRONMENT || 
-                  process.env.RAILWAY_SERVICE_NAME || 
-                  process.env.NODE_ENV === 'production';
-
-// 启动时日志
-console.log('🌍 环境信息:');
-console.log(`   Railway环境: ${isRailway ? '是' : '否'}`);
-console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
-console.log(`   PORT: ${PORT}`);
-console.log(`   RAILWAY_ENVIRONMENT: ${process.env.RAILWAY_ENVIRONMENT || '未设置'}`);
-console.log(`   RAILWAY_SERVICE_NAME: ${process.env.RAILWAY_SERVICE_NAME || '未设置'}`);
-
 // 中间件配置
 app.use(cors());
 app.use(express.json());
@@ -47,87 +34,6 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Railway 环境指导端点
-app.get('/api/railway-guide', (req, res) => {
-    const isRailway = process.env.RAILWAY_ENVIRONMENT || 
-                     process.env.RAILWAY_SERVICE_NAME || 
-                     process.env.NODE_ENV === 'production';
-    
-    if (!isRailway) {
-        return res.json({
-            environment: 'local',
-            message: '这是本地开发环境，无需 Railway 特殊配置',
-            guide: null
-        });
-    }
-    
-    res.json({
-        environment: 'railway',
-        message: '这是 Railway 部署环境，请按照以下步骤配置 Claude CLI',
-        guide: {
-            steps: [
-                {
-                    step: 1,
-                    title: '启动 Railway 终端',
-                    description: '在 Railway 项目控制台中点击 "Terminal" 按钮',
-                    command: null
-                },
-                {
-                    step: 2,
-                    title: '验证 CLI 安装',
-                    description: '检查 Claude CLI 是否正确安装',
-                    command: 'claude --version'
-                },
-                {
-                    step: 3,
-                    title: '运行认证命令',
-                    description: '启动 Claude CLI 认证流程',
-                    command: 'claude login'
-                },
-                {
-                    step: 4,
-                    title: '完成 OAuth 认证',
-                    description: '复制提供的 URL 到浏览器，使用 Anthropic 账户登录授权',
-                    command: null
-                },
-                {
-                    step: 5,
-                    title: '验证认证状态',
-                    description: '确认认证是否成功',
-                    command: 'claude auth status'
-                },
-                {
-                    step: 6,
-                    title: '测试应用',
-                    description: '访问应用测试 Claude 功能',
-                    command: null
-                }
-            ],
-            tips: [
-                '每次 Railway 重新部署后可能需要重新认证',
-                '认证令牌通常在容器重启后仍然有效',
-                '如果遇到问题，请查看 Railway 构建日志',
-                '确保使用正确的 Anthropic 账户进行认证'
-            ],
-            troubleshooting: [
-                {
-                    issue: 'CLI 未找到',
-                    solution: '确保 railway.json 中包含了 CLI 安装命令'
-                },
-                {
-                    issue: '认证失败',
-                    solution: '检查网络连接，确保可以访问 Anthropic 服务'
-                },
-                {
-                    issue: '应用仍显示 500 错误',
-                    solution: '重启 Railway 应用或等待几分钟让认证生效'
-                }
-            ]
-        },
-        timestamp: new Date().toISOString()
-    });
-});
-
 // CLI认证检查端点
 app.get('/api/auth-check', async (req, res) => {
     try {
@@ -138,64 +44,30 @@ app.get('/api/auth-check', async (req, res) => {
         
         try {
             const { stdout } = await execa('claude', ['--version']);
-            console.log('✅ Claude CLI 已安装:', stdout.trim());
-            
-            // 进一步检查认证状态
-            try {
-                const { stdout: authStdout } = await execa('claude', ['auth', 'status']);
-                const isAuthenticated = authStdout.includes('authenticated') || 
-                                     authStdout.includes('logged in') ||
-                                     authStdout.includes('Authorized');
-                
-                console.log('🔓 认证状态:', isAuthenticated ? '已认证' : '未认证');
-                
-                res.json({
-                    status: isAuthenticated ? 'ok' : 'warning',
-                    authenticated: isAuthenticated,
-                    cli_version: stdout.trim(),
-                    auth_details: authStdout.trim(),
-                    message: isAuthenticated ? 'Claude Code CLI 已安装并已认证' : 'Claude Code CLI 已安装但需要认证',
-                    help_text: isAuthenticated ? null : '请在 Railway 终端运行: claude login',
-                    environment: process.env.NODE_ENV || 'development',
-                    timestamp: new Date().toISOString()
-                });
-            } catch (authError) {
-                console.log('⚠️  无法检查认证状态:', authError.message);
-                
-                res.json({
-                    status: 'warning',
-                    authenticated: false,
-                    cli_version: stdout.trim(),
-                    error: '无法验证认证状态',
-                    message: 'Claude Code CLI 已安装但认证状态未知',
-                    help_text: '请在 Railway 终端运行: claude login',
-                    environment: process.env.NODE_ENV || 'development',
-                    timestamp: new Date().toISOString()
-                });
-            }
-        } catch (cliError) {
-            console.log('❌ Claude CLI 未找到:', cliError.message);
+            const isAuthenticated = stdout.includes('claude') || stdout.includes('Claude');
             
             res.json({
-                status: 'error',
+                status: 'ok',
+                authenticated: isAuthenticated,
+                cli_version: stdout,
+                message: isAuthenticated ? 'Claude Code CLI 已安装并可用' : 'Claude Code CLI 需要登录认证',
+                timestamp: new Date().toISOString()
+            });
+        } catch (cliError) {
+            res.json({
+                status: 'warning',
                 authenticated: false,
                 error: 'Claude Code CLI 未找到或未正确安装',
-                message: 'Claude Code CLI 未安装',
-                help_text: '请确保 Railway 构建过程中正确安装了 CLI',
-                environment: process.env.NODE_ENV || 'development',
-                install_command: 'npm install -g @anthropic-ai/claude-code',
+                message: '请运行: claude login',
                 timestamp: new Date().toISOString()
             });
         }
     } catch (error) {
-        console.log('💥 认证检查失败:', error.message);
-        
         res.json({
             status: 'error',
             authenticated: false,
             error: error.message,
             message: '认证检查失败',
-            environment: process.env.NODE_ENV || 'development',
             timestamp: new Date().toISOString()
         });
     }
@@ -625,169 +497,6 @@ app.post('/api/advanced-query', async (req, res) => {
     }
 });
 
-// 脚本执行状态检查端点
-app.get('/api/script-execution-status', async (req, res) => {
-    try {
-        console.log('🔍 检查 Claude Code 生产脚本执行状态...');
-        
-        const { execa } = await import('execa');
-        const fs = await import('fs');
-        const path = await import('path');
-        
-        // 设置环境变量
-        process.env.PATH = `${process.env.PATH}:/usr/local/bin:/opt/nodejs/bin:$(npm config get prefix)/bin`;
-        
-        const status = {
-            script_file: {
-                exists: false,
-                executable: false,
-                size: 0,
-                modified_time: null,
-                permissions: null
-            },
-            execution_log: {
-                exists: false,
-                start_time: null,
-                end_time: null,
-                success: false,
-                error: null,
-                last_lines: []
-            },
-            script_content: {
-                preview_lines: [],
-                total_lines: 0,
-                script_type: 'unknown',
-                has_network_commands: false,
-                has_node_commands: false,
-                has_claude_commands: false
-            },
-            claude_cli: {
-                installed: false,
-                version: null,
-                authenticated: false
-            },
-            timestamp: new Date().toISOString()
-        };
-        
-        // 检查脚本文件
-        const scriptPath = path.join(__dirname, 'claude_code_prod.sh');
-        try {
-            const stats = await fs.promises.stat(scriptPath);
-            status.script_file.exists = true;
-            status.script_file.size = stats.size;
-            status.script_file.modified_time = stats.mtime.toISOString();
-            status.script_file.executable = (stats.mode & parseInt('111', 8)) !== 0;
-            
-            // 获取文件权限
-            const permissions = (stats.mode & parseInt('777', 8)).toString(8);
-            status.script_file.permissions = permissions;
-            
-            // 读取脚本内容预览
-            const content = await fs.promises.readFile(scriptPath, 'utf8');
-            const lines = content.split('\n');
-            status.script_content.total_lines = lines.length;
-            status.script_content.preview_lines = lines.slice(0, 20);
-            
-            // 分析脚本类型
-            if (lines.length > 0) {
-                const firstLine = lines[0];
-                if (firstLine.includes('bash')) {
-                    status.script_content.script_type = 'bash';
-                } else if (firstLine.includes('sh')) {
-                    status.script_content.script_type = 'shell';
-                }
-            }
-            
-            // 检查关键命令
-            status.script_content.has_network_commands = content.includes('curl') || content.includes('wget');
-            status.script_content.has_node_commands = content.includes('npm') || content.includes('node');
-            status.script_content.has_claude_commands = content.includes('claude');
-            
-        } catch (error) {
-            console.log('⚠️  脚本文件检查失败:', error.message);
-        }
-        
-        // 检查执行日志
-        const logPath = '/tmp/claude_code_prod_execution.log';
-        try {
-            const logStats = await fs.promises.stat(logPath);
-            status.execution_log.exists = true;
-            
-            const logContent = await fs.promises.readFile(logPath, 'utf8');
-            const logLines = logContent.split('\n').filter(line => line.trim());
-            
-            if (logLines.length > 0) {
-                // 提取开始和结束时间
-                const firstLine = logLines[0];
-                const lastLine = logLines[logLines.length - 1];
-                
-                const startMatch = firstLine.match(/\[(.*?)\]/);
-                const endMatch = lastLine.match(/\[(.*?)\]/);
-                
-                if (startMatch) status.execution_log.start_time = startMatch[1];
-                if (endMatch) status.execution_log.end_time = endMatch[1];
-                
-                // 检查执行结果
-                status.execution_log.success = logContent.includes('执行成功');
-                if (logContent.includes('执行失败')) {
-                    status.execution_log.success = false;
-                    status.execution_log.error = '脚本执行失败';
-                }
-                
-                // 获取最后几行
-                status.execution_log.last_lines = logLines.slice(-10);
-            }
-            
-        } catch (error) {
-            console.log('⚠️  执行日志检查失败:', error.message);
-        }
-        
-        // 检查 Claude CLI 状态
-        try {
-            const { stdout } = await execa('claude', ['--version'], { 
-                env: { ...process.env, PATH: process.env.PATH }
-            });
-            status.claude_cli.installed = true;
-            status.claude_cli.version = stdout.trim();
-            
-            try {
-                const { stdout: authStdout } = await execa('claude', ['auth', 'status'], { 
-                    env: { ...process.env, PATH: process.env.PATH }
-                });
-                status.claude_cli.authenticated = authStdout.includes('authenticated') || 
-                                             authStdout.includes('logged in') ||
-                                             authStdout.includes('Authorized');
-            } catch (authError) {
-                status.claude_cli.authenticated = false;
-            }
-        } catch (cliError) {
-            status.claude_cli.installed = false;
-        }
-        
-        console.log('✅ 脚本执行状态检查完成');
-        
-        res.json({
-            status: 'ok',
-            data: status,
-            summary: {
-                script_ready: status.script_file.exists && status.script_file.executable,
-                executed: status.execution_log.exists,
-                execution_success: status.execution_log.success,
-                claude_ready: status.claude_cli.installed && status.claude_cli.authenticated
-            },
-            timestamp: new Date().toISOString()
-        });
-        
-    } catch (error) {
-        console.error('❌ 脚本执行状态检查失败:', error);
-        res.status(500).json({
-            status: 'error',
-            error: error.message,
-            timestamp: new Date().toISOString()
-        });
-    }
-});
-
 // 404处理
 app.use((req, res) => {
     res.status(404).json({
@@ -797,128 +506,22 @@ app.use((req, res) => {
     });
 });
 
-// 检查 Claude CLI 认证状态
-async function checkClaudeCLIAuth() {
-    try {
-        const { execa } = await import('execa');
-        
-        // 设置环境变量确保能找到 CLI
-        process.env.PATH = `${process.env.PATH}:/usr/local/bin:/opt/nodejs/bin:$(npm config get prefix)/bin`;
-        
-        // 检查 CLI 是否安装
-        try {
-            const { stdout } = await execa('claude', ['--version'], { 
-                env: { ...process.env, PATH: process.env.PATH }
-            });
-            console.log('✅ Claude CLI 已安装:', stdout.trim());
-            
-            // 检查认证状态
-            try {
-                const { stdout: authStdout } = await execa('claude', ['auth', 'status'], { 
-                    env: { ...process.env, PATH: process.env.PATH }
-                });
-                const isAuthenticated = authStdout.includes('authenticated') || 
-                                     authStdout.includes('logged in') ||
-                                     authStdout.includes('Authorized');
-                
-                if (isAuthenticated) {
-                    console.log('🔐 Claude CLI 已认证');
-                    return true;
-                } else {
-                    console.log('⚠️  Claude CLI 未认证');
-                    console.log('💡 解决方案:');
-                    console.log('   1. 在 Railway 环境变量中设置 CLAUDE_API_KEY');
-                    console.log('   2. 或在 Railway 终端运行: claude login');
-                    return false;
-                }
-            } catch (authError) {
-                console.log('⚠️  无法检查 Claude CLI 认证状态');
-                console.log('💡 请在 Railway 终端运行: claude login');
-                return false;
-            }
-        } catch (cliError) {
-            console.log('❌ Claude CLI 未安装');
-            console.log('💡 正在尝试安装...');
-            
-            try {
-                await execa('npm', ['install', '-g', '@anthropic-ai/claude-code'], { 
-                    env: { ...process.env, PATH: process.env.PATH }
-                });
-                console.log('✅ Claude CLI 安装成功');
-                console.log('⚠️  但仍需要认证，请在 Railway 终端运行: claude login');
-                return false; // 安装成功但仍需认证
-            } catch (installError) {
-                console.log('❌ Claude CLI 安装失败');
-                console.log('💡 请在 Railway 终端手动运行: npm install -g @anthropic-ai/claude-code');
-                return false;
-            }
-        }
-    } catch (error) {
-        console.log('❌ 检查 Claude CLI 认证状态时出错:', error.message);
-        return false;
-    }
-}
-
 // 启动服务器
-const server = app.listen(PORT, async () => {
+app.listen(PORT, () => {
     console.log(`🚀 Claude SDK Demo Server 启动成功!`);
-    
-    if (isRailway) {
-        console.log(`📱 Railway访问地址: https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'your-app.railway.app'}/`);
-        console.log(`🔧 API健康检查: https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'your-app.railway.app'}/api/health`);
-        console.log(`📝 流式响应演示: https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'your-app.railway.app'}/simple-real-demo.html`);
-        
-        // 在 Railway 环境中检查 Claude CLI 认证状态
-        console.log('🔍 检查 Claude CLI 认证状态...');
-        const isAuthenticated = await checkClaudeCLIAuth();
-        
-        if (!isAuthenticated) {
-            console.log('⚠️  Claude CLI 未认证，应用可能无法正常工作');
-            console.log('📝 请在 Railway 终端运行: claude login');
-            console.log('🔑 或在 Railway 环境变量中设置 CLAUDE_API_KEY');
-        }
-    } else {
-        console.log(`📱 本地访问地址: http://localhost:${PORT}`);
-        console.log(`🔧 API健康检查: http://localhost:${PORT}/api/health`);
-        console.log(`📝 流式响应演示: http://localhost:${PORT}/simple-real-demo.html`);
-    }
-    
+    console.log(`📱 访问地址: http://localhost:${PORT}`);
+    console.log(`🔧 API健康检查: http://localhost:${PORT}/api/health`);
+    console.log(`📝 流式响应演示: http://localhost:${PORT}/simple-real-demo.html`);
     console.log(`⏰ 启动时间: ${new Date().toISOString()}`);
-    console.log(`🔧 监听端口: ${PORT}`);
-    console.log(`🌍 环境: ${isRailway ? 'Railway' : '本地'}`);
-});
-
-// 错误处理
-server.on('error', (error) => {
-    if (error.code === 'EADDRINUSE') {
-        console.error(`❌ 端口 ${PORT} 已被占用，请尝试其他端口`);
-        process.exit(1);
-    } else {
-        console.error('❌ 服务器启动失败:', error);
-        process.exit(1);
-    }
 });
 
 // 优雅关闭
 process.on('SIGINT', () => {
-    console.log('\n🛑 收到SIGINT信号，正在优雅关闭服务器...');
-    server.close(() => {
-        console.log('✅ 服务器已关闭');
-        process.exit(0);
-    });
+    console.log('\n🛑 收到关闭信号，正在优雅关闭服务器...');
+    process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-    console.log('\n🛑 收到SIGTERM信号，正在优雅关闭服务器...');
-    console.log('📝 Railway正在重新部署或停止容器...');
-    server.close(() => {
-        console.log('✅ 服务器已优雅关闭');
-        process.exit(0);
-    });
-    
-    // 强制关闭超时
-    setTimeout(() => {
-        console.log('⚠️ 强制关闭服务器');
-        process.exit(1);
-    }, 10000);
+    console.log('\n🛑 收到终止信号，正在关闭服务器...');
+    process.exit(0);
 });
