@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3002;
 
 // 中间件配置
 app.use(cors());
@@ -507,12 +507,23 @@ app.use((req, res) => {
 });
 
 // 启动服务器
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`🚀 Claude SDK Demo Server 启动成功!`);
     console.log(`📱 访问地址: http://localhost:${PORT}`);
     console.log(`🔧 API健康检查: http://localhost:${PORT}/api/health`);
     console.log(`📝 流式响应演示: http://localhost:${PORT}/simple-real-demo.html`);
     console.log(`⏰ 启动时间: ${new Date().toISOString()}`);
+});
+
+// 错误处理
+server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+        console.error(`❌ 端口 ${PORT} 已被占用，请尝试其他端口`);
+        process.exit(1);
+    } else {
+        console.error('❌ 服务器启动失败:', error);
+        process.exit(1);
+    }
 });
 
 // 优雅关闭
