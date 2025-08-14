@@ -639,14 +639,21 @@ async function checkClaudeCLIAuth() {
     try {
         const { execa } = await import('execa');
         
+        // 设置环境变量确保能找到 CLI
+        process.env.PATH = `${process.env.PATH}:/usr/local/bin:/opt/nodejs/bin:$(npm config get prefix)/bin`;
+        
         // 检查 CLI 是否安装
         try {
-            const { stdout } = await execa('claude', ['--version']);
+            const { stdout } = await execa('claude', ['--version'], { 
+                env: { ...process.env, PATH: process.env.PATH }
+            });
             console.log('✅ Claude CLI 已安装:', stdout.trim());
             
             // 检查认证状态
             try {
-                const { stdout: authStdout } = await execa('claude', ['auth', 'status']);
+                const { stdout: authStdout } = await execa('claude', ['auth', 'status'], { 
+                    env: { ...process.env, PATH: process.env.PATH }
+                });
                 const isAuthenticated = authStdout.includes('authenticated') || 
                                      authStdout.includes('logged in') ||
                                      authStdout.includes('Authorized');
@@ -671,16 +678,20 @@ async function checkClaudeCLIAuth() {
             console.log('💡 正在尝试安装...');
             
             try {
-                await execa('npm', ['install', '-g', '@anthropic-ai/claude-code']);
+                await execa('npm', ['install', '-g', '@anthropic-ai/claude-code'], { 
+                    env: { ...process.env, PATH: process.env.PATH }
+                });
                 console.log('✅ Claude CLI 安装成功');
+                console.log('⚠️  但仍需要认证，请在 Railway 终端运行: claude login');
                 return false; // 安装成功但仍需认证
             } catch (installError) {
                 console.log('❌ Claude CLI 安装失败');
+                console.log('💡 请在 Railway 终端手动运行: npm install -g @anthropic-ai/claude-code');
                 return false;
             }
         }
     } catch (error) {
-        console.log('❌ 检查 Claude CLI 认证状态时出错');
+        console.log('❌ 检查 Claude CLI 认证状态时出错:', error.message);
         return false;
     }
 }

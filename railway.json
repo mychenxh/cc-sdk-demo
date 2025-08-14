@@ -5,7 +5,7 @@
     "buildCommand": "npm run build && cd demo-real && npm install"
   },
   "deploy": {
-    "startCommand": "cd demo-real && ./init-claude-auth.sh && npm start",
+    "startCommand": "export PATH=$PATH:/usr/local/bin:/opt/nodejs/bin && cd demo-real && ./init-claude-auth.sh && npm start",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
     "healthcheckPath": "/api/health",

@@ -20,16 +20,33 @@ if [ -z "$RAILWAY_ENVIRONMENT" ]; then
     exit 0
 fi
 
+# 更新 PATH 以包含 npm 全局包
+export PATH="$PATH:/usr/local/bin:/usr/bin:/bin:/opt/nodejs/bin"
+
 # 检查 Claude CLI 是否已安装
 if ! command -v claude &> /dev/null; then
     echo "📦 安装 Claude CLI..."
     npm install -g @anthropic-ai/claude-code
+    
+    # 重新加载 PATH
+    export PATH="$PATH:$(npm config get prefix)/bin"
+    
+    # 等待一下让安装完成
+    sleep 2
 fi
 
-echo "✅ Claude CLI 已安装: $(claude --version)"
+# 检查 CLI 是否可用
+if command -v claude &> /dev/null; then
+    CLAUDE_VERSION=$(claude --version 2>/dev/null || echo "未知版本")
+    echo "✅ Claude CLI 已安装: $CLAUDE_VERSION"
+else
+    echo "❌ Claude CLI 安装失败"
+    echo "💡 请在 Railway 终端手动运行: npm install -g @anthropic-ai/claude-code"
+    exit 1
+fi
 
 # 检查是否已认证
-if claude auth status &> /dev/null; then
+if claude auth status &> /dev/null 2>&1; then
     echo "🔐 Claude CLI 已认证，跳过认证步骤"
     exit 0
 fi
@@ -54,8 +71,11 @@ EOF
     
     echo "✅ API Key 认证配置完成"
     
+    # 等待一下让配置生效
+    sleep 1
+    
     # 验证认证状态
-    if claude auth status &> /dev/null; then
+    if claude auth status &> /dev/null 2>&1; then
         echo "🎉 Claude CLI 认证成功！"
     else
         echo "❌ API Key 认证失败，需要手动认证"
