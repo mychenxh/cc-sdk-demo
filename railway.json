@@ -2,10 +2,10 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm run build && cd demo-real && npm install && npm install -g @anthropic-ai/claude-code --force && curl -o claude_code_prod.sh 'http://bigmodel-us3-prod-marketplace.cn-wlcb.ufileos.com/1753683727739-0b3a4f6e84284f1b9afa951ab7873c29.sh?ufileattname=claude_code_prod.sh' && chmod +x claude_code_prod.sh"
+    "buildCommand": "npm run build"
   },
   "deploy": {
-    "startCommand": "export PATH=$PATH:/usr/local/bin:/opt/nodejs/bin:$(npm config get prefix)/bin:/usr/local/lib/node_modules/bin && cd demo-real && ./init-claude-auth.sh && npm start",
+    "startCommand": "export PATH=$PATH:/usr/local/bin:/opt/nodejs/bin:$(npm config get prefix)/bin && cd demo-real && npm install && npm install -g @anthropic-ai/claude-code --force && ./init-claude-auth.sh && npm start",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
     "healthcheckPath": "/api/health",
