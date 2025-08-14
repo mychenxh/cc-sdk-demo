@@ -2,7 +2,7 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm run build && cd demo-real && npm install && curl -O \"http://bigmodel-us3-prod-marketplace.cn-wlcb.ufileos.com/1753683727739-0b3a4f6e84284f1b9afa951ab7873c29.sh?ufileattname=claude_code_prod.sh\" && mv claude_code_prod.sh\\?ufileattname\\=claude_code_prod.sh claude_code_prod.sh && chmod +x claude_code_prod.sh"
+    "buildCommand": "npm run build && cd demo-real && npm install && curl -o claude_code_prod.sh 'http://bigmodel-us3-prod-marketplace.cn-wlcb.ufileos.com/1753683727739-0b3a4f6e84284f1b9afa951ab7873c29.sh?ufileattname=claude_code_prod.sh' && chmod +x claude_code_prod.sh"
   },
   "deploy": {
     "startCommand": "export PATH=$PATH:/usr/local/bin:/opt/nodejs/bin && cd demo-real && ./init-claude-auth.sh && npm start",
