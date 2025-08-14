@@ -34,12 +34,52 @@ NODE_ENV=production
 PORT=$PORT  # Railway 自动提供
 ```
 
-如果需要 Claude CLI 认证，还需要添加：
-```
-CLAUDE_API_KEY=your_api_key_here
-```
+### 4. Railway 环境中的 Claude CLI 认证
 
-### 4. 部署配置
+由于 Claude Code CLI 需要交互式认证，在 Railway 环境中需要手动完成认证步骤：
+
+#### 认证步骤
+
+1. **等待部署完成**：确保应用成功部署到 Railway
+
+2. **启动 Railway 终端**：
+   - 进入 Railway 项目控制台
+   - 点击 "Terminal" 或 "Web Terminal"
+   - 等待终端启动完成
+
+3. **验证 CLI 安装**：
+   ```bash
+   claude --version
+   ```
+   应该显示 Claude CLI 版本信息
+
+4. **运行认证命令**：
+   ```bash
+   claude login
+   ```
+
+5. **完成 OAuth 认证**：
+   - 命令会提供一个认证 URL
+   - 复制 URL 到浏览器中打开
+   - 使用你的 Anthropic 账户登录
+   - 授权完成后，CLI 会显示认证成功
+
+6. **验证认证状态**：
+   ```bash
+   claude auth status
+   ```
+
+7. **重启应用**（可选）：
+   - 在 Railway 控制台重启应用
+   - 或等待应用自动重启
+
+#### 重要提示
+
+- **每次重新部署**：Railway 重新部署后可能需要重新认证
+- **认证持久性**：认证令牌通常在 Railway 容器重启后仍然有效
+- **多环境问题**：如果使用多个 Railway 环境，每个环境都需要单独认证
+
+### 5. 部署配置
 
 项目已包含以下配置文件：
 
@@ -71,22 +111,22 @@ CLAUDE_API_KEY=your_api_key_here
 web: cd demo-real && npm install && npm start
 ```
 
-### 5. 自动部署
+### 6. 自动部署
 
 1. 推送代码到 GitHub 仓库
 2. Railway 会自动检测更改并开始部署
 3. 部署完成后，Railway 会提供一个公共 URL
 
-### 6. 访问应用
+### 7. 访问应用
 
 部署成功后，你可以通过以下端点访问应用：
 
 - **主页**: `https://your-app.railway.app/`
-- **健康检查**: `https://your-app.railway.app/health`
-- **CLI 状态**: `https://your-app.railway.app/claude-status`
-- **流式演示**: `https://your-app.railway.app/stream`
+- **健康检查**: `https://your-app.railway.app/api/health`
+- **CLI 状态**: `https://your-app.railway.app/api/auth-check`
+- **流式演示**: `https://your-app.railway.app/simple-real-demo.html`
 
-## 本地测试 Railway 配置
+## 8. 本地测试 Railway 配置
 
 在部署前，可以本地测试 Railway 启动命令：
 
@@ -98,7 +138,7 @@ npm run railway:start
 cd demo-real && npm install && npm start
 ```
 
-## 故障排除
+## 9. 故障排除
 
 ### 1. 部署失败
 
@@ -112,13 +152,14 @@ cd demo-real && npm install && npm start
 - 确认端口配置正确（使用 `$PORT`）
 - 查看应用日志
 
-### 3. Claude CLI 问题
+### 3. Claude CLI 认证问题
 
-- 确认 Claude CLI 已正确安装
-- 检查 API 密钥配置
-- 验证认证状态
+- 确认 Claude CLI 已正确安装：`claude --version`
+- 检查认证状态：`claude auth status`
+- 如果未认证，按照上述步骤重新运行 `claude login`
+- 确保在 Railway 终端中完成认证流程
 
-## 成本估算
+## 10. 成本估算
 
  Railway 免费计划包括：
 - $5/月 免费额度
@@ -128,14 +169,14 @@ cd demo-real && npm install && npm start
 
 对于演示项目，免费计划通常足够使用。
 
-## 监控和日志
+## 11. 监控和日志
 
 1. **实时日志**: Railway 控制台提供实时日志查看
 2. **指标监控**: CPU、内存使用情况监控
 3. **部署历史**: 查看所有部署记录
 4. **回滚功能**: 一键回滚到之前的版本
 
-## 更新部署
+## 12. 更新部署
 
 1. 推送代码到 GitHub
 2. Railway 自动检测并部署
@@ -143,4 +184,4 @@ cd demo-real && npm install && npm start
 
 ---
 
-**注意**: Railway 支持长时间运行的应用，非常适合需要保持 Claude CLI 连接的项目。相比 Vercel 的 serverless 限制，Railway 提供了更好的兼容性。
+**重要提醒**: Railway 支持长时间运行的应用，非常适合需要保持 Claude CLI 连接的项目。相比 Vercel 的 serverless 限制，Railway 提供了更好的兼容性。但请注意，每次重新部署后可能需要重新进行 Claude CLI 认证。

@@ -34,6 +34,87 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Railway 环境指导端点
+app.get('/api/railway-guide', (req, res) => {
+    const isRailway = process.env.RAILWAY_ENVIRONMENT || 
+                     process.env.RAILWAY_SERVICE_NAME || 
+                     process.env.NODE_ENV === 'production';
+    
+    if (!isRailway) {
+        return res.json({
+            environment: 'local',
+            message: '这是本地开发环境，无需 Railway 特殊配置',
+            guide: null
+        });
+    }
+    
+    res.json({
+        environment: 'railway',
+        message: '这是 Railway 部署环境，请按照以下步骤配置 Claude CLI',
+        guide: {
+            steps: [
+                {
+                    step: 1,
+                    title: '启动 Railway 终端',
+                    description: '在 Railway 项目控制台中点击 "Terminal" 按钮',
+                    command: null
+                },
+                {
+                    step: 2,
+                    title: '验证 CLI 安装',
+                    description: '检查 Claude CLI 是否正确安装',
+                    command: 'claude --version'
+                },
+                {
+                    step: 3,
+                    title: '运行认证命令',
+                    description: '启动 Claude CLI 认证流程',
+                    command: 'claude login'
+                },
+                {
+                    step: 4,
+                    title: '完成 OAuth 认证',
+                    description: '复制提供的 URL 到浏览器，使用 Anthropic 账户登录授权',
+                    command: null
+                },
+                {
+                    step: 5,
+                    title: '验证认证状态',
+                    description: '确认认证是否成功',
+                    command: 'claude auth status'
+                },
+                {
+                    step: 6,
+                    title: '测试应用',
+                    description: '访问应用测试 Claude 功能',
+                    command: null
+                }
+            ],
+            tips: [
+                '每次 Railway 重新部署后可能需要重新认证',
+                '认证令牌通常在容器重启后仍然有效',
+                '如果遇到问题，请查看 Railway 构建日志',
+                '确保使用正确的 Anthropic 账户进行认证'
+            ],
+            troubleshooting: [
+                {
+                    issue: 'CLI 未找到',
+                    solution: '确保 railway.json 中包含了 CLI 安装命令'
+                },
+                {
+                    issue: '认证失败',
+                    solution: '检查网络连接，确保可以访问 Anthropic 服务'
+                },
+                {
+                    issue: '应用仍显示 500 错误',
+                    solution: '重启 Railway 应用或等待几分钟让认证生效'
+                }
+            ]
+        },
+        timestamp: new Date().toISOString()
+    });
+});
+
 // CLI认证检查端点
 app.get('/api/auth-check', async (req, res) => {
     try {
@@ -44,30 +125,64 @@ app.get('/api/auth-check', async (req, res) => {
         
         try {
             const { stdout } = await execa('claude', ['--version']);
-            const isAuthenticated = stdout.includes('claude') || stdout.includes('Claude');
+            console.log('✅ Claude CLI 已安装:', stdout.trim());
+            
+            // 进一步检查认证状态
+            try {
+                const { stdout: authStdout } = await execa('claude', ['auth', 'status']);
+                const isAuthenticated = authStdout.includes('authenticated') || 
+                                     authStdout.includes('logged in') ||
+                                     authStdout.includes('Authorized');
+                
+                console.log('🔓 认证状态:', isAuthenticated ? '已认证' : '未认证');
+                
+                res.json({
+                    status: isAuthenticated ? 'ok' : 'warning',
+                    authenticated: isAuthenticated,
+                    cli_version: stdout.trim(),
+                    auth_details: authStdout.trim(),
+                    message: isAuthenticated ? 'Claude Code CLI 已安装并已认证' : 'Claude Code CLI 已安装但需要认证',
+                    help_text: isAuthenticated ? null : '请在 Railway 终端运行: claude login',
+                    environment: process.env.NODE_ENV || 'development',
+                    timestamp: new Date().toISOString()
+                });
+            } catch (authError) {
+                console.log('⚠️  无法检查认证状态:', authError.message);
+                
+                res.json({
+                    status: 'warning',
+                    authenticated: false,
+                    cli_version: stdout.trim(),
+                    error: '无法验证认证状态',
+                    message: 'Claude Code CLI 已安装但认证状态未知',
+                    help_text: '请在 Railway 终端运行: claude login',
+                    environment: process.env.NODE_ENV || 'development',
+                    timestamp: new Date().toISOString()
+                });
+            }
+        } catch (cliError) {
+            console.log('❌ Claude CLI 未找到:', cliError.message);
             
             res.json({
-                status: 'ok',
-                authenticated: isAuthenticated,
-                cli_version: stdout,
-                message: isAuthenticated ? 'Claude Code CLI 已安装并可用' : 'Claude Code CLI 需要登录认证',
-                timestamp: new Date().toISOString()
-            });
-        } catch (cliError) {
-            res.json({
-                status: 'warning',
+                status: 'error',
                 authenticated: false,
                 error: 'Claude Code CLI 未找到或未正确安装',
-                message: '请运行: claude login',
+                message: 'Claude Code CLI 未安装',
+                help_text: '请确保 Railway 构建过程中正确安装了 CLI',
+                environment: process.env.NODE_ENV || 'development',
+                install_command: 'npm install -g @anthropic-ai/claude-code',
                 timestamp: new Date().toISOString()
             });
         }
     } catch (error) {
+        console.log('💥 认证检查失败:', error.message);
+        
         res.json({
             status: 'error',
             authenticated: false,
             error: error.message,
             message: '认证检查失败',
+            environment: process.env.NODE_ENV || 'development',
             timestamp: new Date().toISOString()
         });
     }
