@@ -31,7 +31,15 @@
     "vercel-build": "npm run build && cp -r demo-real/*.html demo-real/*.js public/ || true",
     "start": "node demo-real/server.js",
     "railway:start": "cd demo-real && npm install && npm start",
-    "railway:dev": "cd demo-real && npm run dev"
+    "railway:dev": "cd demo-real && npm run dev",
+    "railway:setup": "./scripts/railway-setup.sh",
+    "railway:auth": "./scripts/claude-auth.sh",
+    "railway:verify": "./scripts/verify-auth.sh",
+    "railway:health": "./scripts/health-check.sh --check",
+    "railway:monitor": "./scripts/health-check.sh --monitor",
+    "deploy:setup": "npm run railway:setup && npm run railway:auth",
+    "deploy:full": "npm run build && npm run deploy:setup && npm run railway:verify",
+    "deploy:auto": "npm run deploy:full && npm run railway:health"
   },
   "keywords": [
     "claude",
