@@ -1,4 +1,4 @@
-# CC工具清单
+# CC SKK 工具清单
 
 ## 项目概述
 CC (Claude Code) 工具是一个TypeScript SDK，用于通过命令行界面与Claude进行交互。这是一个官方Python SDK的非官方移植版本，提供了经典的异步生成器API和现代的流式API。
