@@ -5,8 +5,6 @@ CC (Claude Code) 工具是一个TypeScript SDK，用于通过命令行界面与C
 
 ## 核心开发工具
 
-
-
 ### 构建和开发
 - **构建项目**: `npm run build`
 - **开发模式（监听）**: `npm run dev`
