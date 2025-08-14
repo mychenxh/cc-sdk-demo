@@ -5,7 +5,7 @@
     "buildCommand": "npm run build"
   },
   "deploy": {
-    "startCommand": "export PATH=$PATH:/usr/local/bin:/opt/nodejs/bin:$(npm config get prefix)/bin && cd demo-real && npm install && npm install -g @anthropic-ai/claude-code --force && ./init-claude-auth.sh && npm start",
+    "startCommand": "cd demo-real && npm install && npm install -g @anthropic-ai/claude-code --force && export PATH=$PATH:$(npm config get prefix)/bin:/usr/local/bin:/opt/nodejs/bin && which claude && ./init-claude-auth.sh && npm start",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
     "healthcheckPath": "/api/health",
