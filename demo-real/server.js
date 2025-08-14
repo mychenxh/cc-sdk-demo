@@ -10,6 +10,19 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3002;
 
+// Railway环境检测
+const isRailway = process.env.RAILWAY_ENVIRONMENT || 
+                  process.env.RAILWAY_SERVICE_NAME || 
+                  process.env.NODE_ENV === 'production';
+
+// 启动时日志
+console.log('🌍 环境信息:');
+console.log(`   Railway环境: ${isRailway ? '是' : '否'}`);
+console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+console.log(`   PORT: ${PORT}`);
+console.log(`   RAILWAY_ENVIRONMENT: ${process.env.RAILWAY_ENVIRONMENT || '未设置'}`);
+console.log(`   RAILWAY_SERVICE_NAME: ${process.env.RAILWAY_SERVICE_NAME || '未设置'}`);
+
 // 中间件配置
 app.use(cors());
 app.use(express.json());
@@ -624,10 +637,20 @@ app.use((req, res) => {
 // 启动服务器
 const server = app.listen(PORT, () => {
     console.log(`🚀 Claude SDK Demo Server 启动成功!`);
-    console.log(`📱 访问地址: http://localhost:${PORT}`);
-    console.log(`🔧 API健康检查: http://localhost:${PORT}/api/health`);
-    console.log(`📝 流式响应演示: http://localhost:${PORT}/simple-real-demo.html`);
+    
+    if (isRailway) {
+        console.log(`📱 Railway访问地址: https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'your-app.railway.app'}/`);
+        console.log(`🔧 API健康检查: https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'your-app.railway.app'}/api/health`);
+        console.log(`📝 流式响应演示: https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'your-app.railway.app'}/simple-real-demo.html`);
+    } else {
+        console.log(`📱 本地访问地址: http://localhost:${PORT}`);
+        console.log(`🔧 API健康检查: http://localhost:${PORT}/api/health`);
+        console.log(`📝 流式响应演示: http://localhost:${PORT}/simple-real-demo.html`);
+    }
+    
     console.log(`⏰ 启动时间: ${new Date().toISOString()}`);
+    console.log(`🔧 监听端口: ${PORT}`);
+    console.log(`🌍 环境: ${isRailway ? 'Railway' : '本地'}`);
 });
 
 // 错误处理
@@ -643,11 +666,24 @@ server.on('error', (error) => {
 
 // 优雅关闭
 process.on('SIGINT', () => {
-    console.log('\n🛑 收到关闭信号，正在优雅关闭服务器...');
-    process.exit(0);
+    console.log('\n🛑 收到SIGINT信号，正在优雅关闭服务器...');
+    server.close(() => {
+        console.log('✅ 服务器已关闭');
+        process.exit(0);
+    });
 });
 
 process.on('SIGTERM', () => {
-    console.log('\n🛑 收到终止信号，正在关闭服务器...');
-    process.exit(0);
+    console.log('\n🛑 收到SIGTERM信号，正在优雅关闭服务器...');
+    console.log('📝 Railway正在重新部署或停止容器...');
+    server.close(() => {
+        console.log('✅ 服务器已优雅关闭');
+        process.exit(0);
+    });
+    
+    // 强制关闭超时
+    setTimeout(() => {
+        console.log('⚠️ 强制关闭服务器');
+        process.exit(1);
+    }, 10000);
 });
